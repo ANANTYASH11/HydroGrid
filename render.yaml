@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: HydroGrid
+    env: node
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        fromDatabase:
+          name: hydrogrid-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: "5001"
+
+databases:
+  - name: hydrogrid-db
+    databaseName: hydrogrid
+    plan: free
+    region: oregon
