@@ -40,6 +40,24 @@ app.use(express.urlencoded({ extended: true }));
 
 // ==================== API ROUTES ====================
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'HydroGrid Smart Water & Electricity Intelligence Platform',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      usage: '/api/usage',
+      alerts: '/api/alerts',
+      reports: '/api/reports',
+      admin: '/api/admin',
+    },
+  });
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
