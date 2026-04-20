@@ -1,0 +1,186 @@
+/* HydroGrid - Global Styles & Tailwind Directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==================== BASE STYLES ==================== */
+@layer base {
+  /* Smooth scrolling for the entire page */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar styling for dark theme */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0f172a;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+  }
+
+  /* Light mode scrollbar */
+  .light ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  .light ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+  }
+}
+
+/* ==================== COMPONENT STYLES ==================== */
+@layer components {
+  /* Glassmorphism card effect - the signature UI element */
+  .glass-card {
+    @apply bg-dark-800/60 backdrop-blur-xl border border-dark-700/50 rounded-2xl;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  /* Light mode glass card */
+  .light .glass-card {
+    @apply bg-white/80 border-gray-200/60;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  /* Gradient text effect for headings */
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-400 via-primary-500 to-secondary-400;
+  }
+
+  /* Animated gradient border effect */
+  .gradient-border {
+    position: relative;
+    border-radius: 1rem;
+  }
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, #3b82f6, #10b981, #3b82f6);
+    background-size: 200% 200%;
+    animation: gradientShift 3s ease infinite;
+    z-index: -1;
+    opacity: 0.5;
+  }
+
+  /* Primary button with gradient and hover effects */
+  .btn-primary {
+    @apply px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold 
+           rounded-xl hover:from-primary-600 hover:to-primary-700 
+           transition-all duration-300 ease-out
+           shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40
+           hover:-translate-y-0.5 active:translate-y-0;
+  }
+
+  /* Secondary button with outline style */
+  .btn-secondary {
+    @apply px-6 py-3 border border-primary-500/30 text-primary-400 font-semibold 
+           rounded-xl hover:bg-primary-500/10 hover:border-primary-500/50
+           transition-all duration-300 ease-out;
+  }
+
+  /* Input field styling */
+  .input-field {
+    @apply w-full px-4 py-3 bg-dark-800/80 border border-dark-600 rounded-xl
+           text-white placeholder-dark-400
+           focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500
+           transition-all duration-300;
+  }
+
+  .light .input-field {
+    @apply bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400;
+  }
+
+  /* Stat card number styling */
+  .stat-value {
+    @apply text-3xl font-bold tracking-tight;
+  }
+
+  /* Badge styling for alerts/severity */
+  .badge-green {
+    @apply px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30;
+  }
+  .badge-yellow {
+    @apply px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30;
+  }
+  .badge-red {
+    @apply px-2.5 py-0.5 text-xs font-semibold rounded-full bg-red-500/20 text-red-400 border border-red-500/30;
+  }
+
+  /* Sidebar nav link */
+  .nav-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-dark-400 
+           hover:text-white hover:bg-dark-700/50 transition-all duration-200;
+  }
+  .nav-link.active {
+    @apply text-primary-400 bg-primary-500/10 border-r-2 border-primary-500;
+  }
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Loading skeleton animation */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #1e293b;
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+  animation: shimmer 1.5s infinite;
+}
+
+/* Floating animation for landing page elements */
+.float-animation {
+  animation: float 6s ease-in-out infinite;
+}
+.float-animation-delay {
+  animation: float 6s ease-in-out 2s infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-10px) rotate(1deg); }
+  66% { transform: translateY(-5px) rotate(-1deg); }
+}
+
+/* Pulse glow effect for live indicators */
+.pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+}
+
+/* Grid pattern background for landing page */
+.grid-pattern {
+  background-image: 
+    linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}

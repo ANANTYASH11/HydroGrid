@@ -1,0 +1,97 @@
+# Environment Variables
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+
+# Dependencies
+node_modules/
+/node_modules
+.pnp
+.pnp.js
+
+# Testing
+/coverage
+.nyc_output
+
+# Build outputs
+/dist
+/build
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+.eslintcache
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+*.db
+*.sqlite
+dump.rdb
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Generated documentation files (keep only README.md)
+ADMIN_DASHBOARD_GUIDE.md
+API.md
+API_DOCUMENTATION.md
+COMPLETION_SUMMARY.md
+DELIVERY_SUMMARY.md
+DEPLOYMENT.md
+DEVELOPMENT.md
+DOCUMENTATION_INDEX.md
+DOCUMENTATION_MAP.md
+FINAL_REPORT.md
+GETTING_STARTED.md
+IMPROVEMENTS.md
+INDEX.md
+PROJECT_COMPLETE.md
+PROJECT_OVERVIEW.md
+PROJECT_SUMMARY.md
+QUICK_REFERENCE.md
+README_PORTFOLIO.md
+RUNNING_STATUS.md
+START_HERE.md
+
+# Duplicate directories
+dFull\ Stack\ Developer\ Projectclient/
+
+# Installation scripts (kept for reference, not needed in repo)
+install.bat
+install.sh
+setup.bat
+setup.sh
+verify.bat
+verify.sh
+setup.js
+
+# Cache
+.cache/
+.eslintcache
+.prettierignore
+
+# Git
+.git/
+
+# Other
+*.zip
+backup/
+tmp/
