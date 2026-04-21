@@ -16,6 +16,7 @@ const usageRoutes = require('./routes/usage');
 const alertRoutes = require('./routes/alerts');
 const reportRoutes = require('./routes/reports');
 const adminRoutes = require('./routes/admin');
+const aiRoutes = require('./routes/ai');
 
 // Initialize Express application
 const app = express();
@@ -54,6 +55,14 @@ app.get('/', (req, res) => {
       alerts: '/api/alerts',
       reports: '/api/reports',
       admin: '/api/admin',
+      ai: {
+        anomalies: '/api/ai/detect-anomalies',
+        forecast: '/api/ai/predict-next-30-days',
+        recommendations: '/api/ai/recommendations',
+        devices: '/api/ai/device-breakdown',
+        analytics: '/api/ai/analytics',
+        chat: '/api/ai/query'
+      }
     },
   });
 });
@@ -74,6 +83,7 @@ app.use('/api/usage', usageRoutes);    // Usage data routes
 app.use('/api/alerts', alertRoutes);   // Alert routes
 app.use('/api/reports', reportRoutes); // Report routes
 app.use('/api/admin', adminRoutes);    // Admin routes
+app.use('/api/ai', aiRoutes);          // AI/ML routes (anomalies, forecasting, recommendations)
 
 // ==================== ERROR HANDLING ====================
 
