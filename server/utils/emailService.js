@@ -8,17 +8,19 @@ const nodemailer = require('nodemailer');
 
 // Create reusable transporter object using environment-configured SMTP
 const smtpConfig = {
-  host: process.env.SMTP_HOST || 'sandbox.smtp.mailtrap.io',
-  port: parseInt(process.env.SMTP_PORT, 10) || 2525,
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.SMTP_PORT, 10) || 587,
   secure: process.env.SMTP_SECURE === 'true',
   auth: {
-    user: process.env.SMTP_USER || '57a188918ca1a8',
-    pass: process.env.SMTP_PASS || 'fb9a74c65697eb',
+    user: process.env.SMTP_USER || process.env.EMAIL_USER || 'anantyashh21@gmail.com',
+    pass: process.env.SMTP_PASS || process.env.EMAIL_PASS || 'ddfn mlrb wvfj cvmx',
   },
 };
 
-if (!process.env.SMTP_HOST) {
-  console.warn('⚠️ Email service is using Mailtrap sandbox transport. Real email delivery requires SMTP_HOST, SMTP_USER, and SMTP_PASS configuration.');
+const SENDER_EMAIL = process.env.SMTP_USER || process.env.EMAIL_USER || 'anantyashh21@gmail.com';
+
+if (!process.env.SMTP_HOST && !process.env.EMAIL_USER) {
+  console.warn('⚠️ Email service is using default configuration. Ensure EMAIL_USER and EMAIL_PASS are set in Render.');
 }
 
 const transporter = nodemailer.createTransport(smtpConfig);
@@ -34,7 +36,7 @@ const sendAlertEmail = async (user, alert) => {
     const htmlContent = getAlertEmailTemplate(user, alert);
 
     const mailOptions = {
-      from: `"HydroGrid Alert System" <${process.env.SMTP_USER}>`,
+      from: `"HydroGrid Alert System" <${SENDER_EMAIL}>`,
       to: user.email,
       subject: subject,
       html: htmlContent,
@@ -56,7 +58,7 @@ const sendAlertEmail = async (user, alert) => {
 const sendWelcomeEmail = async (user) => {
   try {
     const mailOptions = {
-      from: `"HydroGrid Team" <${process.env.SMTP_USER}>`,
+      from: `"HydroGrid Team" <${SENDER_EMAIL}>`,
       to: user.email,
       subject: 'Welcome to HydroGrid - Smart Water & Electricity Intelligence',
       html: `
@@ -99,7 +101,7 @@ const sendPasswordResetEmail = async (user, resetToken) => {
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
 
     const mailOptions = {
-      from: `"HydroGrid Security" <${process.env.SMTP_USER}>`,
+      from: `"HydroGrid Security" <${SENDER_EMAIL}>`,
       to: user.email,
       subject: 'Password Reset Request - HydroGrid',
       html: `
