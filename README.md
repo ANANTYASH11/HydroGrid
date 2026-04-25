@@ -7,7 +7,7 @@ A production-level, full-stack SaaS web application for tracking, analyzing, and
 --- 
 
 ## 🎯 Features 
-
+ 
 ### Core 
 - **🔐 JWT Authentication** — Secure login/signup with role-based access (User/Admin) 
 - **📊 Smart Dashboard** — Real-time charts, animated counters, usage comparisons
