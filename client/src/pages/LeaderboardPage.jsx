@@ -5,14 +5,17 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Medal, Crown, TrendingUp, Droplets, Zap } from 'lucide-react';
+import { Trophy, Medal, Crown, TrendingUp, Droplets, Zap, RefreshCw } from 'lucide-react';
 import { usageAPI } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
 
 const medals = ['🥇', '🥈', '🥉'];
 
 export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { t } = useLanguage();
 
   useEffect(() => {
     fetchLeaderboard();
@@ -20,18 +23,18 @@ export default function LeaderboardPage() {
 
   const fetchLeaderboard = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await usageAPI.getLeaderboard();
-      setLeaderboard(res.data.data);
+      if (res.data.data && Array.isArray(res.data.data)) {
+        setLeaderboard(res.data.data);
+      } else {
+        throw new Error('Invalid leaderboard data format');
+      }
     } catch (err) {
-      console.log('Using demo leaderboard');
-      setLeaderboard([
-        { _id: '1', name: 'Adarsh Verma', efficiencyScore: 0.0312, totalCost: 4250, totalWaterValue: 6200, totalElectricityValue: 420, badges: [{ icon: '🏆' }, { icon: '💧' }], readingCount: 2867 },
-        { _id: '2', name: 'Ashish Shankar', efficiencyScore: 0.0398, totalCost: 5120, totalWaterValue: 7100, totalElectricityValue: 510, badges: [{ icon: '⚡' }], readingCount: 2571 },
-        { _id: '3', name: 'Priya Sharma', efficiencyScore: 0.0423, totalCost: 5780, totalWaterValue: 7800, totalElectricityValue: 580, badges: [{ icon: '📊' }], readingCount: 2734 },
-        { _id: '4', name: 'Anant Yash', efficiencyScore: 0.0456, totalCost: 6450, totalWaterValue: 8450, totalElectricityValue: 620, badges: [{ icon: '🌟' }, { icon: '💧' }, { icon: '🌿' }], readingCount: 2826 },
-        { _id: '5', name: 'Demo User', efficiencyScore: 0.0512, totalCost: 7260, totalWaterValue: 9200, totalElectricityValue: 690, badges: [], readingCount: 2836 },
-      ]);
+      console.error('Fetch live leaderboard failed:', err.message);
+      setError('Could not fetch live leaderboard data.');
+      setLeaderboard([]);
     } finally {
       setLoading(false);
     }
@@ -40,7 +43,7 @@ export default function LeaderboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="w-12 h-12 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-12 h-12 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "#00E87A", borderTopColor: "transparent" }} />
       </div>
     );
   }
@@ -48,13 +51,36 @@ export default function LeaderboardPage() {
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-          <Trophy className="w-7 h-7 text-amber-400" />
-          Efficiency Leaderboard
-        </h1>
-        <p className="text-dark-400 text-sm mt-1">Most resource-efficient users ranked by cost per reading</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+            <Trophy className="w-7 h-7 text-amber-400" />
+            {t.efficiencyLeaderboard}
+          </h1>
+          <p className="text-zinc-500 text-sm mt-1">{t.leaderboardSubtitle}</p>
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={fetchLeaderboard}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border border-white/[0.08] bg-white/[0.03] text-zinc-400 hover:text-white disabled:opacity-50 transition-all"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          {t.refreshBtn}
+        </motion.button>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-sm"
+        >
+          ℹ️ {error}
+        </motion.div>
+      )}
 
       {/* Top 3 Podium */}
       {leaderboard.length >= 3 && (
@@ -69,7 +95,8 @@ export default function LeaderboardPage() {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: displayIndex * 0.15 }}
-                className={`glass-card p-6 text-center ${isFirst ? 'lg:-mt-4 border-amber-500/30' : ''}`}
+                className={`rounded-2xl border border-white/[0.06] p-6 text-center ${isFirst ? 'lg:-mt-4 border-amber-500/30' : ''}`}
+                style={{ background: "var(--bg-card)" }}
               >
                 <span className="text-4xl">{medals[rank]}</span>
                 <div className={`w-16 h-16 rounded-full mx-auto mt-3 mb-2 flex items-center justify-center text-xl font-bold text-white ${
@@ -80,7 +107,7 @@ export default function LeaderboardPage() {
                   {user.name?.charAt(0)?.toUpperCase()}
                 </div>
                 <h3 className="font-semibold text-white text-lg">{user.name}</h3>
-                <p className="text-sm text-dark-400 mt-1">Score: {user.efficiencyScore?.toFixed(4)}</p>
+                <p className="text-sm text-dark-400 mt-1">{t.scoreLabel}: {user.efficiencyScore?.toFixed(4)}</p>
                 <p className="text-xs text-secondary-400 mt-0.5">₹{user.totalCost?.toFixed(0)} total</p>
                 {user.badges?.length > 0 && (
                   <div className="flex justify-center gap-1 mt-2">
@@ -96,24 +123,24 @@ export default function LeaderboardPage() {
       )}
 
       {/* Full List */}
-      <div className="glass-card overflow-hidden">
-        <div className="p-4 border-b border-dark-700/50">
-          <h3 className="font-semibold text-white">Full Rankings</h3>
+      <div className="rounded-2xl border border-white/[0.06] overflow-hidden" style={{ background: "var(--bg-card)" }}>
+        <div className="p-4 border-b border-white/[0.06]">
+          <h3 className="font-semibold text-white">{t.fullRankings}</h3>
         </div>
-        <div className="divide-y divide-dark-700/30">
+        <div className="divide-y divide-white/[0.04]">
           {leaderboard.map((user, index) => (
             <motion.div
               key={user._id}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="flex items-center gap-4 p-4 hover:bg-dark-700/20 transition-colors"
+              className="flex items-center gap-4 p-4 hover:bg-white/[0.03] transition-colors"
             >
               {/* Rank */}
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
                 index < 3
                   ? 'bg-gradient-to-br from-amber-500/20 to-amber-600/10 text-amber-400'
-                  : 'bg-dark-700/50 text-dark-400'
+                  : 'bg-white/[0.05] text-zinc-500'
               }`}>
                 {index < 3 ? medals[index] : `#${index + 1}`}
               </div>
@@ -125,7 +152,7 @@ export default function LeaderboardPage() {
                 </div>
                 <div>
                   <p className="font-medium text-white">{user.name}</p>
-                  <p className="text-xs text-dark-400">{user.readingCount} readings</p>
+                  <p className="text-xs text-dark-400">{user.readingCount} {t.readingsLabel}</p>
                 </div>
               </div>
 
@@ -148,7 +175,7 @@ export default function LeaderboardPage() {
               {/* Efficiency Score */}
               <div className="text-right">
                 <p className="text-sm font-semibold text-white">{user.efficiencyScore?.toFixed(4)}</p>
-                <p className="text-xs text-dark-400">₹/reading</p>
+                <p className="text-xs text-dark-400">{t.rupeePerReading}</p>
               </div>
             </motion.div>
           ))}
@@ -157,3 +184,5 @@ export default function LeaderboardPage() {
     </div>
   );
 }
+
+

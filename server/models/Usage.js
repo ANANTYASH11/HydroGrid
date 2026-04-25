@@ -14,6 +14,11 @@ const usageSchema = new mongoose.Schema({
     required: true,
     index: true, // Index for fast lookups by user
   },
+  // State/region for aggregation purposes
+  state: {
+    type: String,
+    default: 'Unknown',
+  },
   // Type of resource being measured
   type: {
     type: String,
@@ -56,6 +61,15 @@ const usageSchema = new mongoose.Schema({
 
 // Compound index for efficient queries: find user's usage by type and date
 usageSchema.index({ userId: 1, type: 1, timestamp: -1 });
+
+// Index for state-based aggregation queries
+usageSchema.index({ state: 1, type: 1, timestamp: -1 });
+
+// Index for alert threshold checks (recent usage by user and type)
+usageSchema.index({ userId: 1, type: 1, timestamp: -1 });
+
+// Index for dashboard aggregations (user + date range)
+usageSchema.index({ userId: 1, timestamp: -1 });
 
 /**
  * Pre-save middleware: Automatically calculate cost based on usage

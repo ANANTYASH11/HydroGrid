@@ -7,6 +7,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { LanguageProvider } from './context/LanguageContext';
 
 // Layout
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -24,6 +25,7 @@ import AlertsPage from './pages/AlertsPage';
 import ProfilePage from './pages/ProfilePage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import AdminPage from './pages/AdminPage';
+import IndiaMapPage from './pages/IndiaMapPage';
 
 /**
  * Main App component
@@ -33,9 +35,10 @@ import AdminPage from './pages/AdminPage';
 export default function App() {
   return (
     <AuthProvider>
-      <ThemeProvider>
-        <Router>
-          <Routes>
+      <LanguageProvider>
+        <ThemeProvider>
+          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <Routes>
             {/* ============ PUBLIC ROUTES ============ */}
             {/* Landing page - home page for unauthenticated users */}
             <Route path="/" element={<LandingPage />} />
@@ -53,14 +56,17 @@ export default function App() {
               <Route path="/alerts" element={<AlertsPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/leaderboard" element={<LeaderboardPage />} />
+              <Route path="/india-map" element={<IndiaMapPage />} />
+              <Route path="/world-map" element={<Navigate to="/india-map" replace />} />
               <Route path="/admin" element={<AdminPage />} />
             </Route>
 
             {/* Catch-all: redirect unknown routes to home */}
             <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Router>
-      </ThemeProvider>
+            </Routes>
+          </Router>
+        </ThemeProvider>
+      </LanguageProvider>
     </AuthProvider>
   );
 }

@@ -1,191 +1,190 @@
 /**
- * Authentication Controller
- * Handles user registration, login, profile retrieval, and profile updates
- * Uses JWT tokens for stateless authentication
+ * Authentication Controller (Supabase/Postgres version)
  */
 
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+const { query } = require('../config/db');
+const { OAuth2Client } = require('google-auth-library');
+const { sendWelcomeEmail } = require('../utils/emailService');
 
-/**
- * Generate a JWT token for the given user ID
- * Token expires in 30 days
- * @param {string} id - User's MongoDB ObjectId
- * @returns {string} - Signed JWT token
- */
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: '30d',
   });
 };
 
-/**
- * POST /api/auth/register
- * Register a new user account
- * Creates user, hashes password (via model middleware), returns JWT
- */
 const register = async (req, res, next) => {
   try {
-    console.log('📝 Register request received:', { email: req.body.email, name: req.body.name });
-    const { name, email, password } = req.body;
+    const { name, email, password, state = 'Unknown' } = req.body;
 
-    // Validate required fields
     if (!name || !email || !password) {
-      console.log('❌ Validation failed: missing fields');
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide name, email, and password',
-      });
+      return res.status(400).json({ success: false, message: 'Please provide name, email, and password' });
     }
 
-    // Check if user already exists in database
-    let existingUser = await User.findOne({ email });
-    if (existingUser) {
-      console.log('❌ Email already registered:', email);
-      return res.status(400).json({
-        success: false,
-        message: 'Email already registered',
-      });
+    // Check if user exists
+    const existing = await query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ success: false, message: 'Email already registered' });
     }
 
-    // Create the new user (password is hashed automatically by the model middleware)
-    const user = await User.create({ name, email, password });
-    const token = generateToken(user._id);
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-    console.log('✅ User registered successfully:', { email, userId: user._id });
+    // Insert user
+    const result = await query(
+      'INSERT INTO users (name, email, password, state) VALUES ($1, $2, $3, $4) RETURNING *',
+      [name, email.toLowerCase(), hashedPassword, state]
+    );
+
+    const user = result.rows[0];
+    const token = generateToken(user.id);
+
+    sendWelcomeEmail(user).catch(e => console.error('Email Error:', e));
 
     return res.status(201).json({
       success: true,
       data: {
-        _id: user._id,
+        _id: user.id, // Keep _id for frontend compatibility
         name: user.name,
         email: user.email,
         role: user.role,
+        state: user.state,
         settings: user.settings,
         badges: user.badges,
-        createdAt: user.createdAt,
+        createdAt: user.created_at
       },
-      token,
+      token
     });
   } catch (error) {
-    console.error('❌ Register error:', error.message);
-    return res.status(500).json({
-      success: false,
-      message: 'Registration failed: ' + error.message,
-    });
+    console.error('Register error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * POST /api/auth/login
- * Authenticate a user and return a JWT token
- * Validates email/password combination
- */
 const login = async (req, res, next) => {
   try {
-    console.log('🔑 Login request received:', { email: req.body.email });
     const { email, password } = req.body;
 
-    // Validate required fields
     if (!email || !password) {
-      console.log('❌ Validation failed: missing email or password');
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide email and password',
-      });
+      return res.status(400).json({ success: false, message: 'Please provide email and password' });
     }
 
-    // Find user by email and include the password field for comparison
-    const user = await User.findOne({ email }).select('+password');
+    const result = await query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
+    const user = result.rows[0];
 
-    if (!user) {
-      console.log('❌ User not found:', email);
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password',
-      });
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
-    // Compare provided password with stored hash
-    const isMatch = await user.comparePassword(password);
-
-    if (!isMatch) {
-      console.log('❌ Invalid password for:', email);
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password',
-      });
-    }
-
-    const token = generateToken(user._id);
-    console.log('✅ User logged in successfully:', { email, userId: user._id });
+    const token = generateToken(user.id);
 
     return res.json({
       success: true,
       data: {
-        _id: user._id,
+        _id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
+        state: user.state,
+        avatar: user.avatar,
         settings: user.settings,
-        badges: user.badges,
+        badges: user.badges
       },
-      token,
+      token
     });
   } catch (error) {
-    console.error('❌ Login error:', error.message);
-    return res.status(500).json({
-      success: false,
-      message: 'Login failed: ' + error.message,
-    });
+    console.error('Login error:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * GET /api/auth/profile
- * Get the currently authenticated user's profile
- * Requires valid JWT token (handled by protect middleware)
- */
 const getProfile = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id);
+    const result = await query('SELECT * FROM users WHERE id = $1', [req.user.id]);
     res.json({
       success: true,
-      data: user,
+      data: result.rows[0]
     });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * PUT /api/auth/profile
- * Update the authenticated user's profile and settings
- * Only allows updating specific fields (not password or role directly)
- */
 const updateProfile = async (req, res, next) => {
   try {
     const { name, avatar, settings } = req.body;
-    const updateData = {};
+    
+    const currentUserRes = await query('SELECT settings FROM users WHERE id = $1', [req.user.id]);
+    const currentSettings = currentUserRes.rows[0].settings || {};
+    const newSettings = settings ? { ...currentSettings, ...settings } : currentSettings;
 
-    // Only update fields that were provided
-    if (name) updateData.name = name;
-    if (avatar) updateData.avatar = avatar;
-    if (settings) updateData.settings = { ...req.user.settings, ...settings };
-
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      updateData,
-      { new: true, runValidators: true }
+    const result = await query(
+      'UPDATE users SET name = COALESCE($1, name), avatar = COALESCE($2, avatar), settings = $3 WHERE id = $4 RETURNING *',
+      [name, avatar, JSON.stringify(newSettings), req.user.id]
     );
 
     res.json({
       success: true,
-      data: user,
+      data: result.rows[0]
     });
   } catch (error) {
     next(error);
   }
 };
 
-module.exports = { register, login, getProfile, updateProfile };
+const googleAuth = async (req, res) => {
+  try {
+    const { token, state = 'Unknown' } = req.body;
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+    const { email, name, picture } = ticket.getPayload();
+
+    let result = await query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
+    let user = result.rows[0];
+
+    if (user) {
+      const update = await query(
+        'UPDATE users SET avatar = $1, state = CASE WHEN $2 != \'Unknown\' THEN $2 ELSE state END WHERE id = $3 RETURNING *',
+        [picture, state, user.id]
+      );
+      user = update.rows[0];
+    } else {
+      const newUser = await query(
+        'INSERT INTO users (name, email, password, avatar, state, badges) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        [name, email.toLowerCase(), 'google_auth_' + Date.now(), picture, state, JSON.stringify([{
+          name: 'Google Pioneer',
+          icon: '🔐',
+          description: 'Signed up with Google OAuth',
+          earnedAt: new Date()
+        }])]
+      );
+      user = newUser.rows[0];
+    }
+
+    const token_jwt = generateToken(user.id);
+    res.json({
+      success: true,
+      data: {
+        _id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        state: user.state,
+        avatar: user.avatar,
+        settings: user.settings,
+        badges: user.badges
+      },
+      token: token_jwt
+    });
+  } catch (error) {
+    res.status(401).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { register, login, getProfile, updateProfile, googleAuth };

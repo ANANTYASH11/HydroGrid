@@ -1,96 +1,109 @@
-/**
- * StatCard Component - Animated stat display card
- * Features: glassmorphism, animated counter, trend indicator, icon
- * Used on the Dashboard page for key metrics
- */
-
 import { motion } from 'framer-motion';
 import CountUp from 'react-countup';
+import { TrendingUp, TrendingDown as TrendDown } from 'lucide-react';
 
-/**
- * @param {string} title - Card title (e.g., "Water Usage")
- * @param {number} value - Numeric value to display
- * @param {string} suffix - Unit suffix (e.g., "L", "kWh", "$")
- * @param {string} prefix - Value prefix (e.g., "$")
- * @param {number} trend - Percentage change (positive = up, negative = down)
- * @param {React.Component} icon - Lucide icon component
- * @param {string} color - Color theme: 'blue', 'green', 'amber', 'purple'
- * @param {number} decimals - Decimal places for counter
- */
+/* Color meta per theme */
+const COLOR_META = {
+  blue: {
+    grad:       'from-blue-500/20 to-blue-600/8',
+    border:     'border-blue-500/20',
+    iconBg:     'bg-blue-500/15',
+    iconText:   'text-blue-400',
+    valueText:  'text-blue-300',
+    glow:       'stat-card-water',
+    iconAnim:   'animate-water-icon',
+    ripples:    true,
+    textGlow:   'text-glow-blue',
+  },
+  green: {
+    grad:       'from-emerald-500/20 to-emerald-600/8',
+    border:     'border-emerald-500/20',
+    iconBg:     'bg-emerald-500/15',
+    iconText:   'text-emerald-400',
+    valueText:  'text-emerald-300',
+    glow:       'stat-card-savings',
+    iconAnim:   '',
+    ripples:    false,
+    textGlow:   'text-glow-green',
+  },
+  amber: {
+    grad:       'from-amber-500/20 to-amber-600/8',
+    border:     'border-amber-500/20',
+    iconBg:     'bg-amber-500/15',
+    iconText:   'text-amber-400',
+    valueText:  'text-amber-300',
+    glow:       'stat-card-electricity',
+    iconAnim:   'animate-electricity-icon',
+    ripples:    false,
+    textGlow:   'text-glow-amber',
+  },
+  purple: {
+    grad:       'from-violet-500/20 to-violet-600/8',
+    border:     'border-violet-500/20',
+    iconBg:     'bg-violet-500/15',
+    iconText:   'text-violet-400',
+    valueText:  'text-violet-300',
+    glow:       '',
+    iconAnim:   '',
+    ripples:    false,
+    textGlow:   '',
+  },
+};
+
 export default function StatCard({ title, value, suffix = '', prefix = '', trend, icon: Icon, color = 'blue', decimals = 0, delay = 0 }) {
-  // Color theme mapping
-  const colors = {
-    blue: {
-      bg: 'from-primary-500/20 to-primary-600/10',
-      icon: 'bg-primary-500/20 text-primary-400',
-      text: 'text-primary-400',
-      border: 'border-primary-500/20',
-    },
-    green: {
-      bg: 'from-secondary-500/20 to-secondary-600/10',
-      icon: 'bg-secondary-500/20 text-secondary-400',
-      text: 'text-secondary-400',
-      border: 'border-secondary-500/20',
-    },
-    amber: {
-      bg: 'from-amber-500/20 to-amber-600/10',
-      icon: 'bg-amber-500/20 text-amber-400',
-      text: 'text-amber-400',
-      border: 'border-amber-500/20',
-    },
-    purple: {
-      bg: 'from-purple-500/20 to-purple-600/10',
-      icon: 'bg-purple-500/20 text-purple-400',
-      text: 'text-purple-400',
-      border: 'border-purple-500/20',
-    },
-  };
-
-  const theme = colors[color] || colors.blue;
+  const meta = COLOR_META[color] || COLOR_META.blue;
+  const trendUp = trend !== undefined && trend >= 0;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay }}
-      whileHover={{ y: -2, transition: { duration: 0.2 } }}
-      className={`glass-card p-6 bg-gradient-to-br ${theme.bg} border ${theme.border}`}
+      transition={{ duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] }}
+      whileHover={{ y: -4, scale: 1.015, transition: { duration: 0.25 } }}
+      className={`glass-card p-6 bg-gradient-to-br ${meta.grad} border ${meta.border} ${meta.glow} relative overflow-hidden`}
     >
+      {/* Subtle shimmer line top */}
+      <div className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-${color === 'blue' ? 'blue' : color === 'amber' ? 'amber' : color === 'green' ? 'emerald' : 'violet'}-400/40 to-transparent`} />
+
       <div className="flex items-start justify-between mb-4">
-        {/* Card Title */}
-        <div>
-          <p className="text-sm text-dark-400 font-medium">{title}</p>
-        </div>
-        {/* Icon */}
+        <p className="text-sm font-medium text-dark-400 leading-tight max-w-[120px]">{title}</p>
+
+        {/* Icon with optional ripple rings */}
         {Icon && (
-          <div className={`p-2.5 rounded-xl ${theme.icon}`}>
-            <Icon className="w-5 h-5" />
+          <div className="relative flex-shrink-0">
+            <div className={`relative z-10 p-2.5 rounded-xl ${meta.iconBg}`}>
+              <Icon className={`w-5 h-5 ${meta.iconText} ${meta.iconAnim}`} />
+            </div>
+            {meta.ripples && (
+              <>
+                <div className="ripple-ring-1" style={{ inset: '-8px', borderWidth: '1.5px' }} />
+                <div className="ripple-ring-2" style={{ inset: '-8px', borderWidth: '1.5px' }} />
+                <div className="ripple-ring-3" style={{ inset: '-8px', borderWidth: '1.5px' }} />
+              </>
+            )}
           </div>
         )}
       </div>
 
-      {/* Animated Value */}
-      <div className="mb-2">
-        <span className="stat-value text-white">
+      {/* Animated value */}
+      <div className="mb-3">
+        <div className={`stat-value ${meta.valueText} ${meta.textGlow}`}>
           {prefix}
-          <CountUp
-            end={value}
-            duration={2}
-            decimals={decimals}
-            separator=","
-            delay={delay}
-          />
-          <span className="text-lg font-medium text-dark-400 ml-1">{suffix}</span>
-        </span>
+          <CountUp end={value} duration={2.5} decimals={decimals} separator="," delay={delay} enableScrollSpy scrollSpyOnce />
+          <span className={`text-base font-medium ml-1 text-dark-400`}>{suffix}</span>
+        </div>
       </div>
 
-      {/* Trend Indicator */}
+      {/* Trend */}
       {trend !== undefined && (
         <div className="flex items-center gap-1.5">
-          <span className={`text-sm font-medium ${trend >= 0 ? 'text-secondary-400' : 'text-red-400'}`}>
-            {trend >= 0 ? '↑' : '↓'} {Math.abs(trend).toFixed(1)}%
+          {trendUp
+            ? <TrendingUp  className="w-3.5 h-3.5 text-emerald-400" />
+            : <TrendDown   className="w-3.5 h-3.5 text-red-400" />}
+          <span className={`text-sm font-semibold ${trendUp ? 'text-emerald-400' : 'text-red-400'}`}>
+            {trend >= 0 ? '+' : ''}{Math.abs(trend).toFixed(1)}%
           </span>
-          <span className="text-xs text-dark-400">vs last month</span>
+          <span className="text-xs text-dark-500">vs last month</span>
         </div>
       )}
     </motion.div>

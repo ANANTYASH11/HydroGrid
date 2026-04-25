@@ -1,317 +1,232 @@
-/**
- * AI Routes - Anomaly Detection, Forecasting, Recommendations, NLP
- * Endpoints for machine learning features
- */
-
 const express = require('express');
 const router = express.Router();
-const { protect: auth } = require('../middleware/auth');
-const Usage = require('../models/Usage');
-const {
-  detectAnomalies,
-  forecastUsage,
-  generateRecommendations,
-  estimateDeviceBreakdown,
-  calculateAdvancedAnalytics
-} = require('../utils/aiEngine');
+const { query } = require('../config/db');
+const { protect } = require('../middleware/auth');
 const { getGroqAI } = require('../utils/groqAI');
+
+// Simple Memory Cache to save tokens and reduce latency
+const aiMemoryCache = {};
+const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 hours
+
+const getCachedResponse = (req, endpoint) => {
+  const cacheKey = `${req.user.id}_${endpoint}`; // Use id instead of _id for SQL compatibility
+  const cached = aiMemoryCache[cacheKey];
+  if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+    return cached.data;
+  }
+  return null;
+};
+
+const setCachedResponse = (req, endpoint, data) => {
+  const cacheKey = `${req.user.id}_${endpoint}`;
+  aiMemoryCache[cacheKey] = { timestamp: Date.now(), data };
+};
+
+// All AI endpoints demand auth to identify the user
+router.use(protect);
+
+// Helper to get last 30 days of user usage data aggregated by day and type
+async function getUserUsageContext(userId, days = 30) {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+  
+  const result = await query(`
+    SELECT 
+      date_trunc('day', timestamp) as date,
+      type,
+      SUM(value) as value
+    FROM usage_data
+    WHERE user_id = $1 AND timestamp >= $2
+    GROUP BY date, type
+    ORDER BY date ASC
+  `, [userId, startDate]);
+  
+  const daysMap = {};
+  result.rows.forEach(u => {
+    const d = u.date.toISOString().split('T')[0];
+    if (!daysMap[d]) daysMap[d] = { date: d, water: 0, electricity: 0 };
+    if (u.type === 'water') daysMap[d].water += parseFloat(u.value);
+    else daysMap[d].electricity += parseFloat(u.value);
+  });
+  return Object.values(daysMap);
+}
 
 /**
  * @route   GET /api/ai/detect-anomalies
- * @desc    Detect anomalies in usage data
- * @access  Private
- * @query   days - number of days to analyze (default 30)
- * @query   threshold - z-score threshold (default 2.5)
  */
-router.get('/detect-anomalies', auth, async (req, res) => {
+router.get('/detect-anomalies', async (req, res) => {
   try {
-    const { days = 30, threshold = 2.5 } = req.query;
-    const daysAgo = new Date();
-    daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+    const cached = getCachedResponse(req, 'anomalies');
+    if (cached) return res.json(cached);
 
-    const usageData = await Usage.find({
-      userId: req.user.id,
-      timestamp: { $gte: daysAgo }
-    })
-      .sort({ timestamp: 1 })
-      .lean();
+    const usageContext = await getUserUsageContext(req.user._id, 30);
+    const groq = getGroqAI();
+    
+    if (!groq.enabled || usageContext.length < 5) return res.json({ success: true, anomalies: [] });
 
-    if (!usageData.length) {
-      return res.status(200).json({
-        success: true,
-        anomalies: [],
-        message: 'No anomalies detected (insufficient data)'
-      });
-    }
+    const prompt = `Analyze this 30-day daily water (Liters) and electricity (kWh) usage data for anomalies (unusual spikes or drops). Keep it realistic to a household.\nData: ${JSON.stringify(usageContext)}`;
+    const schema = `{
+      "anomalies": [
+        {
+          "date": "YYYY-MM-DD",
+          "actualValue": 120,
+          "expectedValue": 55,
+          "deviation": 118,
+          "reason": "Short text explaining likely cause (e.g., 'Likely AC left running')",
+          "severity": "HIGH or MEDIUM"
+        }
+      ]
+    }`;
 
-    const usageArray = usageData.map(d => ({
-      date: d.timestamp,
-      value: d.waterUsage + d.electricityUsage
-    }));
-
-    const anomalies = detectAnomalies(usageArray, parseFloat(threshold));
-
-    res.json({
-      success: true,
-      anomalies,
-      count: anomalies.length,
-      timeframe: `${days} days`,
-      analysisDate: new Date().toISOString()
-    });
+    const parsedData = await groq.generateJSONResponse(prompt, schema);
+    const responseData = { success: true, anomalies: parsedData.anomalies || [] };
+    setCachedResponse(req, 'anomalies', responseData);
+    res.json(responseData);
   } catch (err) {
-    console.error('Anomaly detection error:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Error detecting anomalies',
-      error: err.message
-    });
+    console.error('AI Error:', err);
+    res.status(500).json({ success: false, message: 'AI error' });
   }
 });
 
 /**
  * @route   GET /api/ai/predict-next-30-days
- * @desc    Forecast usage for next 30 days
- * @access  Private
  */
-router.get('/predict-next-30-days', auth, async (req, res) => {
+router.get('/predict-next-30-days', async (req, res) => {
   try {
-    const daysAgo = new Date();
-    daysAgo.setDate(daysAgo.getDate() - 60);
+    const cached = getCachedResponse(req, 'forecast');
+    if (cached) return res.json(cached);
 
-    const usageData = await Usage.find({
-      userId: req.user.id,
-      timestamp: { $gte: daysAgo }
-    })
-      .sort({ timestamp: 1 })
-      .lean();
+    const usageContext = await getUserUsageContext(req.user._id, 30);
+    const groq = getGroqAI();
+    if (!groq.enabled || usageContext.length < 5) return res.json({ success: true, forecast: [] });
 
-    if (usageData.length < 7) {
-      return res.status(200).json({
-        success: true,
-        forecast: [],
-        message: 'Insufficient historical data for accurate forecast'
-      });
-    }
+    const prompt = `Based on the latest 30 days of water and electricity usage, forecast the exact usage for the NEXT 30 consecutive days sequentially. Do not skip days. Notice any weekly/weekend patterns and apply them to the forecast.\nData: ${JSON.stringify(usageContext)}`;
+    const schema = `{
+      "forecast": [
+        {
+          "date": "YYYY-MM-DD",
+          "predictedWater": 140.5,
+          "waterLower": 130.0,
+          "waterUpper": 150.0,
+          "predictedElectricity": 12.5,
+          "electricityLower": 11.0,
+          "electricityUpper": 14.0,
+          "confidence": 0.85
+        }
+      ]
+    }`;
 
-    const usageArray = usageData.map(d => ({
-      date: d.timestamp,
-      value: d.waterUsage + d.electricityUsage
-    }));
-
-    const forecast = forecastUsage(usageArray, 30);
-
-    res.json({
-      success: true,
-      forecast,
-      averagePredicted: Math.round(forecast.reduce((a, b) => a + b.predicted, 0) / forecast.length),
-      confidence: 0.85,
-      method: 'Exponential Smoothing with Seasonal Adjustment'
-    });
+    const parsedData = await groq.generateJSONResponse(prompt, schema);
+    const responseData = { success: true, forecast: parsedData.forecast || [] };
+    setCachedResponse(req, 'forecast', responseData);
+    res.json(responseData);
   } catch (err) {
-    console.error('Forecast error:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Error generating forecast',
-      error: err.message
-    });
+    console.error('AI Error:', err);
+    res.status(500).json({ success: false, message: 'AI error' });
   }
 });
 
 /**
  * @route   GET /api/ai/recommendations
- * @desc    Get personalized energy saving recommendations
- * @access  Private
  */
-router.get('/recommendations', auth, async (req, res) => {
+router.get('/recommendations', async (req, res) => {
   try {
-    const daysAgo = new Date();
-    daysAgo.setDate(daysAgo.getDate() - 60);
+    const cached = getCachedResponse(req, 'recommendations');
+    if (cached) return res.json(cached);
 
-    const usageData = await Usage.find({
-      userId: req.user.id,
-      timestamp: { $gte: daysAgo }
-    })
-      .sort({ timestamp: 1 })
-      .lean();
+    const usageContext = await getUserUsageContext(req.user._id, 30);
+    const groq = getGroqAI();
+    if (!groq.enabled || usageContext.length < 5) return res.json({ success: true, recommendations: [] });
 
-    if (!usageData.length) {
-      return res.status(200).json({
-        success: true,
-        recommendations: [],
-        message: 'Insufficient data for recommendations'
-      });
-    }
+    const prompt = `Look at these household usage values. Recommend 4 specific, actionable strategies tailored to their unique pattern (e.g. if electricity is high, focus on AC/lights. If water is high, leaks/laundry). Return INR estimates.\nData: ${JSON.stringify(usageContext)}`;
+    const schema = `{
+      "recommendations": [
+        {
+          "title": "Short Emoji Title (e.g. 🧊 Fix Fridge)",
+          "description": "1 sentence explanation.",
+          "estimatedSavings": "₹200-300/month",
+          "priority": "HIGH, MEDIUM, or LOW"
+        }
+      ]
+    }`;
 
-    const usageArray = usageData.map(d => ({
-      date: d.timestamp,
-      value: d.waterUsage + d.electricityUsage
-    }));
-
-    const recommendations = generateRecommendations(usageArray);
-
-    res.json({
-      success: true,
-      recommendations,
-      totalPotentialSavings: recommendations.reduce((a, b) => a + b.potentialSavings, 0),
-      count: recommendations.length
-    });
+    const parsedData = await groq.generateJSONResponse(prompt, schema);
+    const responseData = { success: true, recommendations: parsedData.recommendations || [] };
+    setCachedResponse(req, 'recommendations', responseData);
+    res.json(responseData);
   } catch (err) {
-    console.error('Recommendations error:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Error generating recommendations',
-      error: err.message
-    });
+    console.error('AI Error:', err);
+    res.status(500).json({ success: false, message: 'AI error' });
   }
 });
 
 /**
  * @route   GET /api/ai/device-breakdown
- * @desc    Estimate device-level usage breakdown
- * @access  Private
  */
-router.get('/device-breakdown', auth, async (req, res) => {
+router.get('/device-breakdown', async (req, res) => {
   try {
-    const daysAgo = new Date();
-    daysAgo.setDate(daysAgo.getDate() - 7);
+    const cached = getCachedResponse(req, 'breakdown');
+    if (cached) return res.json(cached);
 
-    const usageData = await Usage.find({
-      userId: req.user.id,
-      timestamp: { $gte: daysAgo }
-    })
-      .lean();
+    const usageContext = await getUserUsageContext(req.user._id, 30);
+    const groq = getGroqAI();
+    if (!groq.enabled || usageContext.length < 5) return res.json({ success: true, devices: [] });
 
-    const totalUsage = usageData.reduce((a, b) => a + b.electricityUsage, 0);
-    const breakdown = estimateDeviceBreakdown(totalUsage);
+    const prompt = `Based on total historical electricity usage, guess the proportional breakdown by appliances out of 100%. Total cost should approximate ₹8 per total kWh used.\nData: ${JSON.stringify(usageContext)}`;
+    const schema = `{
+      "devices": [
+        {
+          "name": "Air Conditioning",
+          "usage": 45,
+          "cost": "₹3500",
+          "trend": "UP, DOWN, or STABLE"
+        }
+      ]
+    }`;
 
-    res.json({
-      success: true,
-      devices: breakdown,
-      totalUsage,
-      note: 'Breakdown is estimated based on typical appliance consumption patterns'
-    });
+    const parsedData = await groq.generateJSONResponse(prompt, schema);
+    const responseData = { success: true, devices: parsedData.devices || [] };
+    setCachedResponse(req, 'breakdown', responseData);
+    res.json(responseData);
   } catch (err) {
-    console.error('Device breakdown error:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Error calculating device breakdown',
-      error: err.message
-    });
+    console.error('AI Error:', err);
+    res.status(500).json({ success: false, message: 'AI error' });
   }
 });
 
 /**
  * @route   GET /api/ai/analytics
- * @desc    Get advanced analytics and insights
- * @access  Private
  */
-router.get('/analytics', auth, async (req, res) => {
+router.get('/analytics', async (req, res) => {
   try {
-    const { days = 30 } = req.query;
-    const daysAgo = new Date();
-    daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+    const cached = getCachedResponse(req, 'analytics');
+    if (cached) return res.json(cached);
 
-    const usageData = await Usage.find({
-      userId: req.user.id,
-      timestamp: { $gte: daysAgo }
-    })
-      .sort({ timestamp: 1 })
-      .lean();
-
-    if (!usageData.length) {
-      return res.status(200).json({
-        success: true,
-        analytics: null,
-        message: 'No data available for analysis'
-      });
-    }
-
-    const usageArray = usageData.map(d => ({
-      date: d.timestamp,
-      value: d.waterUsage + d.electricityUsage
-    }));
-
-    const analytics = calculateAdvancedAnalytics(usageArray);
-
-    res.json({
-      success: true,
-      analytics,
-      period: `${days} days`,
-      dataPoints: usageData.length
-    });
-  } catch (err) {
-    console.error('Analytics error:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Error calculating analytics',
-      error: err.message
-    });
-  }
-});
-
-/**
- * @route   POST /api/ai/query
- * @desc    Natural language query using Groq AI (requires GROQ_API_KEY)
- * @access  Private
- * @body    { question: "Why is my bill higher?" }
- */
-router.post('/query', auth, async (req, res) => {
-  try {
-    const { question } = req.body;
-
-    if (!question) {
-      return res.status(400).json({
-        success: false,
-        message: 'Question is required'
-      });
-    }
-
+    const usageContext = await getUserUsageContext(req.user._id, 30);
     const groq = getGroqAI();
+    if (!groq.enabled || usageContext.length < 5) return res.json({ success: true, analytics: {} });
 
-    // Check if Groq API key is configured
-    if (!groq.enabled) {
-      return res.status(503).json({
-        success: false,
-        message: 'AI Chat feature not yet configured',
-        setupInstructions: {
-          step1: 'Get API key from https://console.groq.com',
-          step2: 'Add GROQ_API_KEY to .env file',
-          step3: 'Restart the server',
-          estimated_wait: '2-3 minutes'
-        }
-      });
-    }
+    const prompt = `Analyze this dataset to compute overall analytics. Calculate sum, averages, and infer the likely daily peak hour block based on typical Indian usage profiles.\nData: ${JSON.stringify(usageContext)}`;
+    const schema = `{
+      "analytics": {
+        "totalUsage": 2500,
+        "avgDaily": 83.3,
+        "peakHourElectricity": "6 PM - 10 PM",
+        "costPerUnit": 8.5,
+        "estimatedBill": 21500,
+        "trend": "IMPROVING or DECLINING",
+        "trendPercent": -12.4,
+        "efficiency": "EXCELLENT, GOOD, POOR"
+      }
+    }`;
 
-    // Gather context about user's usage
-    const recentUsage = await Usage.find({ userId: req.user.id })
-      .sort({ timestamp: -1 })
-      .limit(100)
-      .lean();
-
-    const avgUsage = recentUsage.length > 0
-      ? recentUsage.reduce((a, b) => a + b.electricityUsage, 0) / recentUsage.length
-      : 0;
-
-    // Process query with Groq
-    const response = await groq.processQuery(question, {
-      currentUsage: recentUsage[0]?.electricityUsage || 0,
-      averageUsage: Math.round(avgUsage),
-      dataPoints: recentUsage.length
-    });
-
-    res.json({
-      success: true,
-      answer: response,
-      question,
-      timestamp: new Date().toISOString()
-    });
+    const parsedData = await groq.generateJSONResponse(prompt, schema);
+    const responseData = { success: true, analytics: parsedData.analytics || {} };
+    setCachedResponse(req, 'analytics', responseData);
+    res.json(responseData);
   } catch (err) {
-    console.error('Query error:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Error processing query',
-      error: err.message
-    });
+    console.error('AI Error:', err);
+    res.status(500).json({ success: false, message: 'AI error' });
   }
 });
 

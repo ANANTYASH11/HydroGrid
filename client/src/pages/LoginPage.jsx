@@ -1,22 +1,63 @@
-/**
+﻿/**
  * Login Page - Authentication screen for existing users
- * Features: split-screen layout, animated illustration, form validation
+ * Features: split-screen layout, animated illustration, form validation, Google OAuth
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Droplets, Mail, Lock, Eye, EyeOff, ArrowRight, Zap } from 'lucide-react';
+import { Droplets, Mail, Lock, Eye, EyeOff, ArrowRight, Zap, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function LoginPage() {
+  const { t } = useLanguage();
+  const { isDark } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [state, setState] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, googleLogin, isAuthenticated, token } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      console.log('✅ User already authenticated, redirecting to dashboard');
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, token, navigate]);
+
+  const indianStates = [
+    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Delhi',
+    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
+    'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
+    'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+    'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
+  ];
+
+  useEffect(() => {
+    // Clear any stale fake tokens created by the old demo-login fallback
+    const storedToken = localStorage.getItem('hydrogrid_token');
+    const storedEmail = localStorage.getItem('hydrogrid_last_email');
+    if (storedToken && storedToken.startsWith('demo_token_')) {
+      localStorage.removeItem('hydrogrid_token');
+      localStorage.removeItem('hydrogrid_user');
+    }
+    // Clear fake auto-generated emails (contain @hydrogrid.local)
+    if (storedEmail && storedEmail.includes('@hydrogrid.local')) {
+      localStorage.removeItem('hydrogrid_last_email');
+    } else if (storedEmail) {
+      setEmail(storedEmail);
+    }
+    const lastState = localStorage.getItem('hydrogrid_last_state');
+    if (lastState) {
+      setState(lastState);
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,57 +65,51 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login({ email, password });
-      // Small delay to ensure auth state updates
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 100);
+      console.log('🔐 Starting login process...');
+      const result = await login({ email, password });
+      console.log('✅ Login result:', result);
+      
+      if (result) {
+        if (state) localStorage.setItem('hydrogrid_last_state', state);
+        console.log('✅ Login successful, redirecting to dashboard');
+        // Navigate immediately after successful login
+        // The state update in AuthContext will happen, but we don't wait for it
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 100);
+      } else {
+        throw new Error('No user returned from login');
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
-    } finally {
+      console.error('❌ Login error:', err);
+      const errorMsg = err.response?.data?.message || err.message || 'Login failed. Please try again.';
+      setError(errorMsg);
       setLoading(false);
     }
   };
 
-  // Quick demo login — works without backend
-  const handleDemoLogin = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      // Use pure client-side demo (no API call)
-      const demoUser = {
-        _id: 'demo_user_001',
-        name: 'Anant Yash',
-        email: 'anant@hydrogrid.com',
-        role: 'admin',
-        badges: [
-          { name: 'Early Adopter', icon: '🌟', description: 'Joined HydroGrid', earnedAt: new Date() },
-          { name: 'Water Saver', icon: '💧', description: 'Reduced water usage by 20%', earnedAt: new Date() },
-          { name: 'Eco Warrior', icon: '🌿', description: 'Carbon neutral for a month', earnedAt: new Date() },
-        ],
-        settings: { waterThreshold: 500, electricityThreshold: 50, notifications: true },
-        createdAt: '2025-10-15T10:30:00.000Z',
-      };
-      const demoToken = 'demo_token_' + Date.now();
-      localStorage.setItem('hydrogrid_token', demoToken);
-      localStorage.setItem('hydrogrid_user', JSON.stringify(demoUser));
-      // Redirect to dashboard
-      navigate('/dashboard');
-    } catch (err) {
-      setError('Demo login failed');
-    } finally {
-      setLoading(false);
+  // Quick demo login — fills the form with real credentials and submits
+  const handleQuickFill = (type) => {
+    if (type === 'admin') {
+      setEmail('anantyash21@gmail.com');
+      setPassword('Anant@123');
+      setState('Maharashtra');
+    } else {
+      setEmail('demo@hydrogrid.com');
+      setPassword('demo123');
+      setState('Delhi');
     }
+    setError('');
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex" style={{ background: 'var(--bg-base)' }}>
       {/* Left side - Animated illustration */}
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900 items-center justify-center p-12 relative overflow-hidden">
+      <div className="hidden lg:flex flex-1 items-center justify-center p-12 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #07070C, #0A0B10, #07070C)' }}>
         {/* Decorative elements */}
         <div className="absolute inset-0 grid-pattern" />
-        <div className="absolute top-1/3 left-1/3 w-72 h-72 bg-primary-500/15 rounded-full blur-3xl animate-pulse-slow" />
-        <div className="absolute bottom-1/3 right-1/3 w-72 h-72 bg-secondary-500/15 rounded-full blur-3xl animate-pulse-slow" style={{ animationDelay: '1.5s' }} />
+        <div className="absolute top-1/3 left-1/3 w-72 h-72 rounded-full blur-3xl animate-pulse" style={{ background: 'rgba(0,232,122,0.08)' }} />
+        <div className="absolute bottom-1/3 right-1/3 w-72 h-72 rounded-full blur-3xl animate-pulse" style={{ background: 'rgba(255,149,0,0.06)', animationDelay: '1.5s' }} />
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -86,15 +121,14 @@ export default function LoginPage() {
           <motion.div
             animate={{ y: [-10, 10, -10] }}
             transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-            className="w-24 h-24 mx-auto mb-8 rounded-3xl bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center shadow-2xl shadow-primary-500/30"
+            className="w-24 h-24 mx-auto mb-8 rounded-3xl flex items-center justify-center shadow-2xl" style={{ background: '#00E87A' }}
           >
             <Droplets className="w-12 h-12 text-white" />
           </motion.div>
 
-          <h2 className="text-3xl font-bold text-white mb-4">Welcome to HydroGrid</h2>
-          <p className="text-dark-300 leading-relaxed">
-            Your intelligent companion for water and electricity management.
-            Track usage, save money, and reduce your environmental impact.
+          <h2 className="text-3xl font-bold text-white mb-4">{t.welcomeToHydrogrid}</h2>
+          <p className="text-zinc-400 leading-relaxed">
+            {t.intelligentCompanion}
           </p>
 
           {/* Feature pills */}
@@ -105,7 +139,7 @@ export default function LoginPage() {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.5 + i * 0.2 }}
-                className="px-4 py-1.5 rounded-full bg-dark-700/60 border border-dark-600/50 text-dark-300 text-sm"
+                className="px-4 py-1.5 rounded-full border text-zinc-400 text-sm" style={{ background: 'rgba(255,255,255,0.05)', borderColor: "var(--border-sub)" }}
               >
                 {feature}
               </motion.span>
@@ -115,7 +149,7 @@ export default function LoginPage() {
       </div>
 
       {/* Right side - Login form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-dark-900">
+      <div className="flex-1 flex items-center justify-center p-8" style={{ background: 'var(--bg-base)' }}>
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -124,14 +158,14 @@ export default function LoginPage() {
         >
           {/* Logo for mobile */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-\[#00E87A\] flex items-center justify-center">
               <Droplets className="w-5 h-5 text-white" />
             </div>
-            <span className="text-2xl font-bold gradient-text">HydroGrid</span>
+            <span className="text-2xl font-bold font-black text-white">HydroGrid</span>
           </div>
 
-          <h1 className="text-3xl font-bold text-white mb-2">Sign In</h1>
-          <p className="text-dark-400 mb-8">Enter your credentials to access your dashboard</p>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-hi)' }}>{t.signIn}</h1>
+          <p className="mb-8" style={{ color: 'var(--text-mid)' }}>{t.enterCredentials}</p>
 
           {/* Error message */}
           {error && (
@@ -147,9 +181,9 @@ export default function LoginPage() {
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">Email</label>
+              <label className="block text-sm font-medium text-zinc-400 mb-2">Email</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                 <input
                   id="login-email"
                   type="email"
@@ -163,9 +197,9 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">Password</label>
+              <label className="block text-sm font-medium text-zinc-400 mb-2">Password</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                 <input
                   id="login-password"
                   type={showPassword ? 'text' : 'password'}
@@ -178,41 +212,73 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-dark-400 hover:text-white transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-2">State (for data training)</label>
+              <select
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                className="input-field w-full text-white"
+              >
+                <option value="">Select your state</option>
+                {indianStates.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-black disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:-translate-y-0.5" style={{ background: "#00E87A", boxShadow: "0 6px 24px rgba(0,232,122,0.22)" }}
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
-                <>Sign In <ArrowRight className="w-4 h-4" /></>
+                <>{t.signIn} <ArrowRight className="w-4 h-4" /></>
               )}
             </button>
           </form>
 
-          {/* Demo login button */}
-          <button
-            onClick={handleDemoLogin}
-            disabled={loading}
-            className="w-full mt-4 px-6 py-3 rounded-xl bg-dark-700/50 border border-dark-600/50 text-dark-300 hover:text-white hover:bg-dark-700 transition-all flex items-center justify-center gap-2 text-sm"
-          >
-            <Zap className="w-4 h-4 text-amber-400" />
-            Quick Demo Login
-          </button>
+          {/* Quick-fill credential buttons */}
+          <div className="space-y-2">
+            <p className="text-center text-zinc-600 text-xs uppercase tracking-widest">Quick Fill</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => handleQuickFill('admin')}
+                disabled={loading}
+                className="px-4 py-2.5 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50" style={{ color: '#00E87A', background: 'rgba(0,232,122,0.08)', border: '1px solid rgba(0,232,122,0.25)' }}
+              >
+                <Zap className="w-3.5 h-3.5" />
+                Admin Demo
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickFill('user')}
+                disabled={loading}
+                className="px-4 py-2.5 rounded-xl bg-secondary-600/20 hover:bg-secondary-600/30 border border-secondary-500/30 font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50" style={{ color: "#FF9500", background: "rgba(255,149,0,0.08)", borderColor: "rgba(255,149,0,0.2)" }}
+              >
+                <CheckCircle className="w-3.5 h-3.5" />
+                User Demo
+              </button>
+            </div>
+            <p className="text-center text-zinc-600 text-xs">Click to fill credentials, then press Sign In</p>
+          </div>
 
           {/* Sign up link */}
-          <p className="text-center text-dark-400 text-sm mt-8">
-            Don't have an account?{' '}
-            <Link to="/signup" className="text-primary-400 hover:text-primary-300 font-medium transition-colors">
-              Create one
+          <p className="text-center text-zinc-500 text-sm mt-8">
+            {t.dontHaveAccount}{' '}
+            <Link to="/signup" className="font-medium transition-colors hover:opacity-80" style={{ color: '#00E87A' }}>
+              {t.createOne}
             </Link>
           </p>
         </motion.div>
@@ -220,3 +286,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

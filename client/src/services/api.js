@@ -6,9 +6,12 @@
 
 import axios from 'axios';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:5000';
+
 // Create Axios instance with base URL and defaults
 const API = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -53,6 +56,7 @@ API.interceptors.response.use(
 export const authAPI = {
   register: (data) => API.post('/auth/register', data),
   login: (data) => API.post('/auth/login', data),
+  googleAuth: (data) => API.post('/auth/google', data),
   getProfile: () => API.get('/auth/profile'),
   updateProfile: (data) => API.put('/auth/profile', data),
 };
@@ -65,6 +69,15 @@ export const usageAPI = {
   simulateIoT: (data) => API.post('/usage/simulate', data),
   getLeaderboard: () => API.get('/usage/leaderboard'),
   getCarbonFootprint: (params) => API.get('/usage/carbon', { params }),
+  getTariffEstimate: (params) => API.get('/usage/tariff-estimate', { params }),
+  downloadTariffTemplate: () => API.get('/usage/tariff-template', { responseType: 'blob' }),
+  uploadTariffs: (data) => API.post('/usage/upload-tariffs', data),
+  getMapData: () => API.get('/usage/map'),
+};
+
+export const liveAPI = {
+  getStatus: () => API.get('/live/status'),
+  getWsUrl: () => `${WS_BASE_URL}/ws/live`,
 };
 
 // ==================== ALERTS API ====================

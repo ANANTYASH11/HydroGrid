@@ -7,7 +7,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const connectDB = require('./config/db');
+const { WebSocketServer } = require('ws');
+const { connectDB } = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 
 // Import route modules
@@ -17,10 +18,12 @@ const alertRoutes = require('./routes/alerts');
 const reportRoutes = require('./routes/reports');
 const adminRoutes = require('./routes/admin');
 const aiRoutes = require('./routes/ai');
+const mlRoutes = require('./routes/ml');
 
 // Initialize Express application
 const app = express();
 const PORT = process.env.PORT || 5000;
+const LIVE_FEED_INTERVAL_MS = 10000;
 
 // Connect to MongoDB
 connectDB();
@@ -29,7 +32,17 @@ connectDB();
 
 // Enable CORS for frontend communication
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow localhost on any port for development
+    if (origin.match(/^http:\/\/localhost:\d+$/)) {
+      return callback(null, true);
+    }
+    
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 
@@ -77,6 +90,17 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Live service status for frontend health indicators
+app.get('/api/live/status', (req, res) => {
+  res.json({
+    success: true,
+    wsPath: '/ws/live',
+    connectedClients: app.locals.wsClientCount || 0,
+    intervalMs: LIVE_FEED_INTERVAL_MS,
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Mount route modules
 app.use('/api/auth', authRoutes);      // Authentication routes
 app.use('/api/usage', usageRoutes);    // Usage data routes
@@ -84,6 +108,7 @@ app.use('/api/alerts', alertRoutes);   // Alert routes
 app.use('/api/reports', reportRoutes); // Report routes
 app.use('/api/admin', adminRoutes);    // Admin routes
 app.use('/api/ai', aiRoutes);          // AI/ML routes (anomalies, forecasting, recommendations)
+app.use('/api/ml', mlRoutes);          // ML training routes (model training, states analysis)
 
 // ==================== ERROR HANDLING ====================
 
@@ -100,7 +125,7 @@ app.use(errorHandler);
 
 // ==================== START SERVER ====================
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`
   ╔═══════════════════════════════════════════════╗
   ║                                               ║
@@ -111,5 +136,41 @@ app.listen(PORT, () => {
   ╚═══════════════════════════════════════════════╝
   `);
 });
+
+// ==================== WEBSOCKET LIVE FEED ====================
+
+const wss = new WebSocketServer({ server, path: '/ws/live' });
+app.locals.wsClientCount = 0;
+
+wss.on('connection', (ws) => {
+  app.locals.wsClientCount = wss.clients.size;
+
+  ws.send(JSON.stringify({
+    type: 'connected',
+    message: 'HydroGrid live feed connected',
+    timestamp: new Date().toISOString(),
+  }));
+
+  ws.on('close', () => {
+    app.locals.wsClientCount = wss.clients.size;
+  });
+});
+
+setInterval(() => {
+  const payload = {
+    type: 'live_metrics',
+    timestamp: new Date().toISOString(),
+    waterLpm: parseFloat((18 + Math.random() * 6).toFixed(2)),
+    electricityKw: parseFloat((1.2 + Math.random() * 2.5).toFixed(2)),
+    alerts: Math.random() > 0.9 ? 1 : 0,
+  };
+
+  const message = JSON.stringify(payload);
+  wss.clients.forEach((client) => {
+    if (client.readyState === 1) {
+      client.send(message);
+    }
+  });
+}, LIVE_FEED_INTERVAL_MS);
 
 module.exports = app;

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Alerts Page - View and manage threshold-based notifications
  * Features: severity filtering, mark as read, color-coded alerts
  */
@@ -7,11 +7,15 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, Filter, CheckCheck, Trash2, AlertTriangle, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import { alertsAPI } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const { t } = useLanguage();
+  const { isDark } = useTheme();
 
   useEffect(() => {
     fetchAlerts();
@@ -25,12 +29,12 @@ export default function AlertsPage() {
     } catch (err) {
       console.log('Using demo alerts');
       setAlerts([
-        { _id: '1', type: 'electricity', severity: 'red', message: '🚨 Critical: Electricity usage spike detected! 85 kWh recorded (70% above threshold)', timestamp: new Date().toISOString(), read: false },
+        { _id: '1', type: 'electricity', severity: 'red', message: '� Critical: Electricity usage spike detected! 85 kWh recorded (70% above threshold)', timestamp: new Date().toISOString(), read: false },
         { _id: '2', type: 'water', severity: 'yellow', message: '⚠️ Warning: Water usage (580L) is approaching your daily limit of 500L', timestamp: new Date(Date.now() - 3600000).toISOString(), read: false },
-        { _id: '3', type: 'water', severity: 'red', message: '🚨 Possible leak detected! Unusual water consumption pattern at 3 AM', timestamp: new Date(Date.now() - 7200000).toISOString(), read: true },
+        { _id: '3', type: 'water', severity: 'red', message: '� Possible leak detected! Unusual water consumption pattern at 3 AM', timestamp: new Date(Date.now() - 7200000).toISOString(), read: true },
         { _id: '4', type: 'system', severity: 'green', message: '✅ Great job! Your electricity usage was 15% below average this week', timestamp: new Date(Date.now() - 86400000).toISOString(), read: false },
         { _id: '5', type: 'electricity', severity: 'yellow', message: '⚠️ Peak hour alert: High electricity usage detected between 6-9 PM', timestamp: new Date(Date.now() - 172800000).toISOString(), read: true },
-        { _id: '6', type: 'system', severity: 'green', message: '🏆 You earned the "Water Saver" badge! Congrats on reducing water usage by 20%', timestamp: new Date(Date.now() - 259200000).toISOString(), read: true },
+        { _id: '6', type: 'system', severity: 'green', message: '� You earned the "Water Saver" badge! Congrats on reducing water usage by 20%', timestamp: new Date(Date.now() - 259200000).toISOString(), read: true },
       ]);
     } finally {
       setLoading(false);
@@ -71,7 +75,7 @@ export default function AlertsPage() {
       case 'red': return <AlertCircle className="w-5 h-5 text-red-400" />;
       case 'yellow': return <AlertTriangle className="w-5 h-5 text-amber-400" />;
       case 'green': return <CheckCircle className="w-5 h-5 text-secondary-400" />;
-      default: return <Info className="w-5 h-5 text-dark-400" />;
+      default: return <Info className="w-5 h-5 text-zinc-500" />;
     }
   };
 
@@ -82,33 +86,35 @@ export default function AlertsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            <Bell className="w-7 h-7 text-primary-400" />
-            Alerts
+          <h1 className={`text-2xl font-bold flex items-center gap-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <Bell className="w-7 h-7 text-white" style={{ color: "#00E87A" }} />
+            {t.alerts || 'Alerts'}
             {unreadCount > 0 && (
               <span className="px-2.5 py-0.5 rounded-full bg-red-500 text-white text-sm font-medium">
                 {unreadCount}
               </span>
             )}
           </h1>
-          <p className="text-dark-400 text-sm mt-1">Manage your threshold-based notifications</p>
+          <p className={`text-sm mt-1 ${isDark ? 'text-zinc-500' : 'text-gray-500'}`}>{t.alertsSubtitle}</p>
         </div>
         <button
           onClick={handleMarkAllRead}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-dark-700/50 border border-dark-600/50 text-dark-300 hover:text-white transition-all text-sm"
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all text-sm ${
+            isDark ? 'bg-white/[0.05]/50 border border-dark-600/50 text-zinc-400 hover:text-white' : 'bg-gray-100 border border-gray-200 text-gray-600 hover:text-gray-900'
+          }`}
         >
-          <CheckCheck className="w-4 h-4" /> Mark All Read
+          <CheckCheck className="w-4 h-4" /> {t.markAllRead || 'Mark All Read'}
         </button>
       </div>
 
       {/* Filters */}
       <div className="flex gap-2 overflow-x-auto pb-2">
         {[
-          { id: 'all', label: 'All' },
-          { id: 'unread', label: `Unread (${unreadCount})` },
-          { id: 'red', label: '🔴 Critical' },
-          { id: 'yellow', label: '🟡 Warning' },
-          { id: 'green', label: '🟢 Info' },
+          { id: 'all', label: t.filterAll },
+          { id: 'unread', label: `${t.filterUnread} (${unreadCount})` },
+          { id: 'red', label: t.filterCritical },
+          { id: 'yellow', label: t.filterWarning },
+          { id: 'green', label: t.filterInfo },
         ].map(f => (
           <button
             key={f.id}
@@ -116,7 +122,7 @@ export default function AlertsPage() {
             className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
               filter === f.id
                 ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
-                : 'text-dark-400 hover:text-white hover:bg-dark-700/50 border border-transparent'
+                : 'text-zinc-500 hover:text-white hover:bg-white/[0.05]/50 border border-transparent'
             }`}
           >
             {f.label}
@@ -127,7 +133,7 @@ export default function AlertsPage() {
       {/* Alert List */}
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "#00E87A", borderTopColor: "transparent" }} />
         </div>
       ) : (
         <div className="space-y-3">
@@ -139,7 +145,7 @@ export default function AlertsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -100 }}
                 transition={{ delay: i * 0.05 }}
-                className={`glass-card p-5 flex items-start gap-4 transition-all ${
+                className={`rounded-2xl border border-white/[0.06] p-5 flex items-start gap-4 transition-all ${
                   !alert.read ? 'border-l-4' : ''
                 } ${
                   alert.severity === 'red' ? 'border-l-red-500' :
@@ -156,7 +162,7 @@ export default function AlertsPage() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm ${alert.read ? 'text-dark-400' : 'text-white'}`}>
+                  <p className={`text-sm ${alert.read ? 'text-zinc-500' : 'text-white'}`}>
                     {alert.message}
                   </p>
                   <div className="flex items-center gap-3 mt-2">
@@ -178,7 +184,7 @@ export default function AlertsPage() {
                   {!alert.read && (
                     <button
                       onClick={() => handleMarkRead(alert._id)}
-                      className="p-2 rounded-lg text-dark-400 hover:text-secondary-400 hover:bg-secondary-500/10 transition-colors"
+                      className="p-2 rounded-lg text-zinc-500 hover:text-secondary-400 hover:bg-secondary-500/10 transition-colors"
                       title="Mark as read"
                     >
                       <CheckCircle className="w-4 h-4" />
@@ -186,7 +192,7 @@ export default function AlertsPage() {
                   )}
                   <button
                     onClick={() => handleDelete(alert._id)}
-                    className="p-2 rounded-lg text-dark-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    className="p-2 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                     title="Delete"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -197,9 +203,9 @@ export default function AlertsPage() {
           </AnimatePresence>
 
           {filteredAlerts.length === 0 && (
-            <div className="glass-card p-12 text-center">
-              <Bell className="w-12 h-12 text-dark-600 mx-auto mb-3" />
-              <p className="text-dark-400">No alerts to display</p>
+            <div className="rounded-2xl border border-white/[0.06] p-12 text-center" style={{ background: "var(--bg-card)" }}>
+              <Bell className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
+              <p className="text-zinc-500">{t.noAlertsDisplay}</p>
             </div>
           )}
         </div>
@@ -207,3 +213,6 @@ export default function AlertsPage() {
     </div>
   );
 }
+
+
+

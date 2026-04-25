@@ -10,16 +10,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function DashboardLayout() {
   const { isAuthenticated, loading } = useAuth();
+  const { isDark } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Show nothing while checking auth state
   if (loading) {
     return (
-      <div className="min-h-screen bg-dark-900 flex items-center justify-center">
-        <div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-base)' }}>
+        <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#00E87A', borderTopColor: 'transparent' }} />
       </div>
     );
   }
@@ -30,7 +32,7 @@ export default function DashboardLayout() {
   }
 
   return (
-    <div className="flex min-h-screen bg-dark-900">
+    <div className="flex min-h-screen" style={{ background: 'var(--bg-base)' }}>
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
         <Sidebar />

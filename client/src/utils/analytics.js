@@ -151,7 +151,7 @@ export function generateSmartSuggestions(usageData) {
     if (avgWater > 400) {
       suggestions.push({
         type: 'water',
-        icon: '💧',
+        icon: '�',
         priority: 'high',
         title: 'High Water Consumption Detected',
         description: `Your average daily water usage is ${avgWater.toFixed(0)}L, which is above the recommended 300L per household. Consider installing low-flow fixtures.`,
@@ -169,7 +169,7 @@ export function generateSmartSuggestions(usageData) {
       if (avgNight > 20) {
         suggestions.push({
           type: 'water',
-          icon: '🔧',
+          icon: '�',
           priority: 'critical',
           title: 'Possible Water Leak Detected',
           description: `Unusual water usage detected during nighttime hours (${avgNight.toFixed(0)}L avg). This could indicate a leak. Check pipes and fixtures.`,
@@ -207,7 +207,7 @@ export function generateSmartSuggestions(usageData) {
   // General suggestions
   suggestions.push({
     type: 'general',
-    icon: '🌱',
+    icon: '�',
     priority: 'low',
     title: 'Switch to LED Lighting',
     description: 'LED bulbs use 75% less energy than incandescent bulbs and last 25x longer. Switching your entire home can save significantly.',
@@ -217,7 +217,7 @@ export function generateSmartSuggestions(usageData) {
   if (savings && savings.total > 0) {
     suggestions.push({
       type: 'general',
-      icon: '🏆',
+      icon: '�',
       priority: 'info',
       title: 'Great Progress!',
       description: `You've saved ₹${savings.total.toFixed(0)} compared to last month! Keep up the efficient usage patterns.`,

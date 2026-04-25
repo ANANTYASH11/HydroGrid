@@ -11,13 +11,27 @@ const User = require('../models/User');
 const Usage = require('../models/Usage');
 const Alert = require('../models/Alert');
 
-// Demo user accounts
+// Demo user accounts with Indian states
 const demoUsers = [
   {
     name: 'Anant Yash',
+    email: 'anantyash21@gmail.com',
+    password: 'Anant@123',
+    role: 'admin',
+    state: 'Maharashtra',
+    badges: [
+      { name: 'Early Adopter', icon: '🌟', description: 'Joined HydroGrid in its first month' },
+      { name: 'Water Saver', icon: '💧', description: 'Reduced water usage by 20%' },
+      { name: 'Green Champion', icon: '🌿', description: 'Maintained low carbon footprint for 3 months' },
+      { name: 'Admin', icon: '👑', description: 'Platform administrator' },
+    ],
+  },
+  {
+    name: 'Anant Yash (Demo)',
     email: 'anant@hydrogrid.com',
     password: 'password123',
     role: 'admin',
+    state: 'Maharashtra',
     badges: [
       { name: 'Early Adopter', icon: '🌟', description: 'Joined HydroGrid in its first month' },
       { name: 'Water Saver', icon: '💧', description: 'Reduced water usage by 20%' },
@@ -29,6 +43,7 @@ const demoUsers = [
     email: 'adarsh@hydrogrid.com',
     password: 'password123',
     role: 'user',
+    state: 'Karnataka',
     badges: [
       { name: 'Energy Star', icon: '⚡', description: 'Top 10% most efficient electricity user' },
       { name: 'Eco Explorer', icon: '🌍', description: 'Explored all platform features' },
@@ -39,6 +54,7 @@ const demoUsers = [
     email: 'ashish@hydrogrid.com',
     password: 'password123',
     role: 'user',
+    state: 'Tamil Nadu',
     badges: [
       { name: 'Consistent Tracker', icon: '📊', description: 'Logged data for 30 consecutive days' },
       { name: 'Water Warrior', icon: '🏆', description: 'Saved 1000+ liters in a month' },
@@ -49,6 +65,7 @@ const demoUsers = [
     email: 'demo@hydrogrid.com',
     password: 'demo123',
     role: 'user',
+    state: 'Delhi',
     badges: [],
   },
   {
@@ -56,8 +73,37 @@ const demoUsers = [
     email: 'priya@hydrogrid.com',
     password: 'password123',
     role: 'user',
+    state: 'Rajasthan',
     badges: [
       { name: 'Power Saver', icon: '⚡', description: 'Reduced electricity by 25%' },
+    ],
+  },
+  {
+    name: 'Rajesh Kumar',
+    email: 'rajesh@hydrogrid.com',
+    password: 'password123',
+    role: 'user',
+    state: 'Gujarat',
+    badges: [
+      { name: 'Eco Warrior', icon: '🌿', description: 'Reduced carbon footprint by 30%' },
+    ],
+  },
+  {
+    name: 'Neha Singh',
+    email: 'neha@hydrogrid.com',
+    password: 'password123',
+    role: 'user',
+    state: 'Uttar Pradesh',
+    badges: [],
+  },
+  {
+    name: 'Arjun Patel',
+    email: 'arjun@hydrogrid.com',
+    password: 'password123',
+    role: 'user',
+    state: 'West Bengal',
+    badges: [
+      { name: 'Data Champion', icon: '📈', description: 'Most complete usage records' },
     ],
   },
 ];
@@ -66,7 +112,7 @@ const demoUsers = [
  * Generate realistic water usage for a given date
  * Simulates household patterns: morning/evening peaks, weekend variation
  */
-function generateWaterReadings(date, userId) {
+function generateWaterReadings(date, userId, state) {
   const readings = [];
   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
   const readingsCount = isWeekend ? 8 : 6; // More readings on weekends (home more)
@@ -88,6 +134,7 @@ function generateWaterReadings(date, userId) {
 
     readings.push({
       userId,
+      state,
       type: 'water',
       value: parseFloat(value.toFixed(1)),
       unit: 'liters',
@@ -103,7 +150,7 @@ function generateWaterReadings(date, userId) {
  * Generate realistic electricity usage for a given date
  * Hourly readings simulating smart meter data
  */
-function generateElectricityReadings(date, userId) {
+function generateElectricityReadings(date, userId, state) {
   const readings = [];
   const isWeekend = date.getDay() === 0 || date.getDay() === 6;
 
@@ -137,6 +184,7 @@ function generateElectricityReadings(date, userId) {
 
     readings.push({
       userId,
+      state,
       type: 'electricity',
       value: parseFloat(value.toFixed(2)),
       unit: 'kWh',
@@ -181,74 +229,78 @@ async function seedDatabase() {
         date.setDate(date.getDate() - day);
         date.setHours(0, 0, 0, 0);
 
-        // Add water and electricity readings for this day
-        allReadings.push(...generateWaterReadings(date, user._id));
-        allReadings.push(...generateElectricityReadings(date, user._id));
+        // Add water and electricity readings for this day (with state)
+        allReadings.push(...generateWaterReadings(date, user._id, user.state));
+        allReadings.push(...generateElectricityReadings(date, user._id, user.state));
       }
 
       // Bulk insert all readings for this user
       await Usage.insertMany(allReadings);
       totalReadings += allReadings.length;
-      console.log(`📊 Generated ${allReadings.length} readings for ${user.name}`);
+      console.log(`📊 Generated ${allReadings.length} readings for ${user.name} (${user.state})`);
     }
 
-    // Create sample alerts
-    const sampleAlerts = [
-      {
-        userId: createdUsers[0]._id,
-        type: 'electricity',
-        severity: 'red',
-        message: '🚨 Critical: Electricity usage spike detected! 85 kWh recorded (70% above threshold)',
-        threshold: 50,
-        actualValue: 85,
-        read: false,
-      },
-      {
-        userId: createdUsers[0]._id,
-        type: 'water',
-        severity: 'yellow',
-        message: '⚠️ Warning: Water usage (580L) is approaching your daily limit of 500L',
-        threshold: 500,
-        actualValue: 580,
-        read: false,
-      },
-      {
-        userId: createdUsers[0]._id,
-        type: 'water',
-        severity: 'red',
-        message: '🚨 Possible leak detected! Unusual water consumption pattern at 3 AM',
-        threshold: 500,
-        actualValue: 750,
-        read: true,
-      },
-      {
-        userId: createdUsers[0]._id,
-        type: 'system',
-        severity: 'green',
-        message: '✅ Great job! Your electricity usage was 15% below average this week',
-        read: false,
-      },
-      {
-        userId: createdUsers[0]._id,
-        type: 'electricity',
-        severity: 'yellow',
-        message: '⚠️ Peak hour alert: High electricity usage detected between 6-9 PM',
-        threshold: 50,
-        actualValue: 62,
-        read: false,
-      },
-    ];
+    // Create sample alerts for every user
+    const sampleAlerts = [];
+    for (const user of createdUsers) {
+      sampleAlerts.push(
+        {
+          userId: user._id,
+          type: 'electricity',
+          severity: 'red',
+          message: '🚨 Critical: Electricity usage spike detected! 85 kWh recorded (70% above threshold)',
+          threshold: 50,
+          actualValue: 85,
+          read: false,
+        },
+        {
+          userId: user._id,
+          type: 'water',
+          severity: 'yellow',
+          message: '⚠️ Warning: Water usage (580L) is approaching your daily limit of 500L',
+          threshold: 500,
+          actualValue: 580,
+          read: false,
+        },
+        {
+          userId: user._id,
+          type: 'water',
+          severity: 'red',
+          message: '🚨 Possible leak detected! Unusual water consumption pattern at 3 AM',
+          threshold: 500,
+          actualValue: 750,
+          read: true,
+        },
+        {
+          userId: user._id,
+          type: 'system',
+          severity: 'green',
+          message: '✅ Great job! Your electricity usage was 15% below average this week',
+          read: false,
+        },
+        {
+          userId: user._id,
+          type: 'electricity',
+          severity: 'yellow',
+          message: '⚠️ Peak hour alert: High electricity usage detected between 6-9 PM',
+          threshold: 50,
+          actualValue: 62,
+          read: false,
+        }
+      );
+    }
 
     await Alert.create(sampleAlerts);
-    console.log(`🚨 Created ${sampleAlerts.length} sample alerts`);
+    console.log(`🚨 Created ${sampleAlerts.length} sample alerts (${sampleAlerts.length / createdUsers.length} per user)`);
 
     console.log('\n🎉 Database seeded successfully!');
     console.log(`   Total users: ${createdUsers.length}`);
     console.log(`   Total readings: ${totalReadings}`);
     console.log(`   Total alerts: ${sampleAlerts.length}`);
     console.log('\n📧 Demo login credentials:');
-    console.log('   Admin: anant@hydrogrid.com / password123');
-    console.log('   User:  demo@hydrogrid.com / demo123');
+    console.log('   Your Account: anantyash21@gmail.com / Anant@123');
+    console.log('   Admin Demo:   anant@hydrogrid.com / password123');
+    console.log('   User Demo:    demo@hydrogrid.com / demo123');
     console.log('\n🇮🇳 Configured for Indian locale (₹ INR, IST timezone)');
 
     process.exit(0);

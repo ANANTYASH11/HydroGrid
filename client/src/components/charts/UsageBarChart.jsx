@@ -38,9 +38,9 @@ export default function UsageBarChart({ data = [], title = 'Monthly Cost Compari
 
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 5 }} barGap={4}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-          <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-          <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(v) => `₹${v}`} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-sub)" vertical={false} />
+          <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-mid)', fontSize: 12 }} />
+          <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-mid)', fontSize: 12 }} tickFormatter={(v) => `₹${v}`} />
           <Tooltip content={<CustomTooltip />} />
           <Bar dataKey="waterCost" name="Water" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
           <Bar dataKey="electricityCost" name="Electricity" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />

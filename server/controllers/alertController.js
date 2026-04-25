@@ -1,117 +1,75 @@
 /**
- * Alert Controller
- * Manages threshold-based alerts and notifications
- * Provides CRUD operations and threshold checking
+ * Alert Controller (Supabase/Postgres version)
  */
 
-const Alert = require('../models/Alert');
+const { query } = require('../config/db');
 
-/**
- * GET /api/alerts
- * Retrieve alerts for the authenticated user
- * Query params: severity, type, read (true/false), limit
- */
 const getAlerts = async (req, res, next) => {
   try {
     const { severity, type, read, limit = 50 } = req.query;
+    let sql = 'SELECT * FROM alerts WHERE user_id = $1';
+    let params = [req.user.id];
+    let count = 2;
 
-    // Build filter query
-    const filter = { userId: req.user._id };
-    if (severity) filter.severity = severity;
-    if (type) filter.type = type;
-    if (read !== undefined) filter.read = read === 'true';
+    if (severity) { sql += ` AND severity = $${count++}`; params.push(severity); }
+    if (type) { sql += ` AND type = $${count++}`; params.push(type); }
+    if (read !== undefined) { sql += ` AND read = $${count++}`; params.push(read === 'true'); }
 
-    const alerts = await Alert.find(filter)
-      .sort({ timestamp: -1 })
-      .limit(parseInt(limit));
+    sql += ` ORDER BY timestamp DESC LIMIT $${count}`;
+    params.push(parseInt(limit));
 
-    // Get unread count for the notification badge
-    const unreadCount = await Alert.countDocuments({
-      userId: req.user._id,
-      read: false,
-    });
+    const result = await query(sql, params);
+    const unreadRes = await query('SELECT COUNT(*) FROM alerts WHERE user_id = $1 AND read = false', [req.user.id]);
 
     res.json({
       success: true,
-      count: alerts.length,
-      unreadCount,
-      data: alerts,
+      count: result.rows.length,
+      unreadCount: parseInt(unreadRes.rows[0].count),
+      data: result.rows,
     });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * PUT /api/alerts/:id/read
- * Mark a specific alert as read
- */
 const markRead = async (req, res, next) => {
   try {
-    const alert = await Alert.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user._id },
-      { read: true },
-      { new: true }
+    const result = await query(
+      'UPDATE alerts SET read = true WHERE id = $1 AND user_id = $2 RETURNING *',
+      [req.params.id, req.user.id]
     );
 
-    if (!alert) {
-      return res.status(404).json({
-        success: false,
-        message: 'Alert not found',
-      });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Alert not found' });
     }
 
-    res.json({
-      success: true,
-      data: alert,
-    });
+    res.json({ success: true, data: result.rows[0] });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * PUT /api/alerts/read-all
- * Mark all alerts as read for the authenticated user
- */
 const markAllRead = async (req, res, next) => {
   try {
-    await Alert.updateMany(
-      { userId: req.user._id, read: false },
-      { read: true }
-    );
-
-    res.json({
-      success: true,
-      message: 'All alerts marked as read',
-    });
+    await query('UPDATE alerts SET read = true WHERE user_id = $1 AND read = false', [req.user.id]);
+    res.json({ success: true, message: 'All alerts marked as read' });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * DELETE /api/alerts/:id
- * Delete a specific alert
- */
 const deleteAlert = async (req, res, next) => {
   try {
-    const alert = await Alert.findOneAndDelete({
-      _id: req.params.id,
-      userId: req.user._id,
-    });
+    const result = await query(
+      'DELETE FROM alerts WHERE id = $1 AND user_id = $2 RETURNING *',
+      [req.params.id, req.user.id]
+    );
 
-    if (!alert) {
-      return res.status(404).json({
-        success: false,
-        message: 'Alert not found',
-      });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Alert not found' });
     }
 
-    res.json({
-      success: true,
-      message: 'Alert deleted',
-    });
+    res.json({ success: true, message: 'Alert deleted' });
   } catch (error) {
     next(error);
   }

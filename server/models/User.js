@@ -43,6 +43,12 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  // User's state/region for data aggregation and ML training
+  state: {
+    type: String,
+    default: 'Unknown',
+    trim: true,
+  },
   // Gamification badges earned by the user
   badges: [{
     name: String,        // Badge title (e.g., "Water Saver")

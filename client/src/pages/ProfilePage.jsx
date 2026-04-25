@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Profile Page - User profile management and settings
  * Features: profile editing, badges display, settings with IST timezone & ₹ currency
  * Configured for Indian locale
@@ -9,9 +9,13 @@ import { motion } from 'framer-motion';
 import { User, Mail, Shield, Award, Settings, Save, Camera, Clock, Globe, IndianRupee } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
+import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
+  const { t } = useLanguage();
+  const { isDark } = useTheme();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.name || '');
   const [saving, setSaving] = useState(false);
@@ -55,19 +59,19 @@ export default function ProfilePage() {
 
   // Default badges if user has none
   const badges = user?.badges?.length > 0 ? user.badges : [
-    { name: 'Early Adopter', icon: '🌟', description: 'Joined HydroGrid platform', earnedAt: new Date() },
-    { name: 'First Reading', icon: '📊', description: 'Logged your first meter reading', earnedAt: new Date() },
+    { name: 'Early Adopter', icon: '�', description: 'Joined HydroGrid platform', earnedAt: new Date() },
+    { name: 'First Reading', icon: '�', description: 'Logged your first meter reading', earnedAt: new Date() },
   ];
 
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-          <User className="w-7 h-7 text-primary-400" />
-          Profile
+        <h1 className={`text-2xl font-bold flex items-center gap-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          <User className="w-7 h-7 text-white" style={{ color: "#00E87A" }} />
+          {t.profile}
         </h1>
-        <p className="text-dark-400 text-sm mt-1">Manage your account and preferences</p>
+        <p className={`text-sm mt-1 ${isDark ? 'text-dark-400' : 'text-gray-500'}`}>{t.manageAccount}</p>
       </div>
 
       {/* Tabs */}
@@ -83,7 +87,7 @@ export default function ProfilePage() {
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
               activeTab === tab.id
                 ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
-                : 'text-dark-400 hover:text-white hover:bg-dark-700/50 border border-transparent'
+                : 'text-dark-400 hover:text-white hover:bg-white/\[0.05\] border border-transparent'
             }`}
           >
             <tab.icon className="w-4 h-4" />
@@ -204,7 +208,7 @@ export default function ProfilePage() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.1 }}
-                className="glass-card p-5 flex items-center gap-4"
+                className="rounded-2xl border border-white/[0.06] p-5 flex items-center gap-4" style={{ background: "var(--bg-card)" }}
               >
                 <span className="text-4xl">{badge.icon}</span>
                 <div>
@@ -227,7 +231,7 @@ export default function ProfilePage() {
               { name: 'Streak Master', icon: '🔥', description: 'Log data for 90 consecutive days' },
               { name: 'Community Leader', icon: '👑', description: 'Reach #1 on the leaderboard' },
             ].map((badge, i) => (
-              <div key={i} className="glass-card p-5 flex items-center gap-4 opacity-50">
+              <div key={i} className="rounded-2xl border border-white/[0.06] p-5 flex items-center gap-4 opacity-50" style={{ background: "var(--bg-card)" }}>
                 <span className="text-4xl grayscale">{badge.icon}</span>
                 <div>
                   <h3 className="font-semibold text-dark-400">{badge.name}</h3>
@@ -245,7 +249,7 @@ export default function ProfilePage() {
           {/* Locale Settings */}
           <div>
             <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Globe className="w-5 h-5 text-primary-400" /> Regional Settings
+              <Globe className="w-5 h-5 text-white" style={{ color: "#00E87A" }} /> Regional Settings
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
@@ -318,12 +322,12 @@ export default function ProfilePage() {
           {/* Utility Rates */}
           <div>
             <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <IndianRupee className="w-5 h-5 text-primary-400" /> Utility Rates
+              <IndianRupee className="w-5 h-5 text-white" style={{ color: "#00E87A" }} /> Utility Rates
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="glass-card p-4 bg-dark-700/30">
                 <p className="text-sm text-dark-400 mb-1">💧 Water Rate</p>
-                <p className="text-xl font-bold text-primary-400">₹0.05 <span className="text-sm font-normal text-dark-400">/liter</span></p>
+                <p className="text-xl font-bold text-white" style={{ color: "#00E87A" }}>₹0.05 <span className="text-sm font-normal text-dark-400">/liter</span></p>
               </div>
               <div className="glass-card p-4 bg-dark-700/30">
                 <p className="text-sm text-dark-400 mb-1">⚡ Electricity Rate</p>
@@ -360,3 +364,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+

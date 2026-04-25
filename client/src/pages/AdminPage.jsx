@@ -25,15 +25,16 @@ const AdminPage = () => {
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('hydrogrid_token');
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
       
       // Fetch stats
-      const statsRes = await fetch('http://localhost:5001/api/admin/stats', {
+      const statsRes = await fetch(`${API_BASE_URL}/admin/stats`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
       // Fetch users
-      const usersRes = await fetch('http://localhost:5001/api/admin/users', {
+      const usersRes = await fetch(`${API_BASE_URL}/admin/users`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -240,7 +241,7 @@ const AdminPage = () => {
                                 ? 'bg-red-500/10 text-red-400 border border-red-500/30'
                                 : 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
                             }`}>
-                              {u.role === 'admin' ? '👑 Admin' : '👤 User'}
+                              {u.role === 'admin' ? '� Admin' : '� User'}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-slate-400">{u.region || 'India'}</td>

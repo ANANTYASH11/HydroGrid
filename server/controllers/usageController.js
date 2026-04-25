@@ -1,193 +1,186 @@
 /**
- * Usage Controller
- * Handles CRUD operations for water/electricity usage data
- * Includes dashboard stats, IoT simulation, leaderboard, and carbon footprint
+ * Usage Controller (Supabase/Postgres version)
+ * Handles CRUD operations for water/electricity usage data using Raw SQL
  */
 
-const Usage = require('../models/Usage');
-const Alert = require('../models/Alert');
-const User = require('../models/User');
+const { query } = require('../config/db');
+const { sendAlertEmail } = require('../utils/emailService');
 
-/**
- * POST /api/usage
- * Add a new usage reading (manual meter entry)
- * Automatically calculates cost and checks thresholds for alerts
- */
+const INDIA_TARIFFS = {
+  default: {
+    electricity: [
+      { upto: 100, rate: 4.0 },
+      { upto: 300, rate: 6.5 },
+      { upto: Infinity, rate: 8.0 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.03 },
+      { upto: 25000, rate: 0.05 },
+      { upto: Infinity, rate: 0.08 },
+    ],
+  },
+  maharashtra: {
+    electricity: [
+      { upto: 100, rate: 4.2 },
+      { upto: 300, rate: 7.2 },
+      { upto: Infinity, rate: 9.1 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.03 },
+      { upto: 25000, rate: 0.06 },
+      { upto: Infinity, rate: 0.09 },
+    ],
+  },
+  delhi: {
+    electricity: [
+      { upto: 200, rate: 3.0 },
+      { upto: 400, rate: 6.8 },
+      { upto: Infinity, rate: 8.5 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.02 },
+      { upto: 25000, rate: 0.05 },
+      { upto: Infinity, rate: 0.08 },
+    ],
+  },
+  karnataka: {
+    electricity: [
+      { upto: 100, rate: 4.5 },
+      { upto: 300, rate: 7.0 },
+      { upto: Infinity, rate: 8.8 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.03 },
+      { upto: 25000, rate: 0.05 },
+      { upto: Infinity, rate: 0.07 },
+    ],
+  },
+};
+
 const addUsage = async (req, res, next) => {
   try {
-    const { type, value, source } = req.body;
+    const { type, value, source = 'manual' } = req.body;
+    const unit = type === 'water' ? 'liters' : 'kWh';
+    
+    // Calculate cost based on hardcoded rates (simplified for now)
+    const cost = type === 'water' ? value * 0.05 : value * 8;
 
-    // Create new usage record
-    const usage = await Usage.create({
-      userId: req.user._id,
-      type,
-      value,
-      source: source || 'manual',
-    });
+    const result = await query(
+      'INSERT INTO usage_data (user_id, state, type, value, unit, cost, source) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+      [req.user.id, req.user.state, type, value, unit, cost, source]
+    );
 
-    // Check if usage exceeds threshold and generate alert if needed
-    await checkAndCreateAlert(req.user, type, value);
+    const usage = result.rows[0];
 
-    res.status(201).json({
-      success: true,
-      data: usage,
-    });
+    checkAndCreateAlert(req.user, type, value).catch(err => console.error('Alert Error:', err));
+
+    res.status(201).json({ success: true, data: usage });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * GET /api/usage
- * Retrieve usage data with optional filters
- * Query params: type (water/electricity), startDate, endDate, limit
- */
 const getUsage = async (req, res, next) => {
   try {
     const { type, startDate, endDate, limit = 100 } = req.query;
+    let sql = 'SELECT * FROM usage_data WHERE user_id = $1';
+    let params = [req.user.id];
+    let count = 2;
 
-    // Build filter query
-    const filter = { userId: req.user._id };
-    if (type) filter.type = type;
-    if (startDate || endDate) {
-      filter.timestamp = {};
-      if (startDate) filter.timestamp.$gte = new Date(startDate);
-      if (endDate) filter.timestamp.$lte = new Date(endDate);
+    if (type) {
+      sql += ` AND type = $${count++}`;
+      params.push(type);
+    }
+    if (startDate) {
+      sql += ` AND timestamp >= $${count++}`;
+      params.push(new Date(startDate));
+    }
+    if (endDate) {
+      sql += ` AND timestamp <= $${count++}`;
+      params.push(new Date(endDate));
     }
 
-    const usage = await Usage.find(filter)
-      .sort({ timestamp: -1 })
-      .limit(parseInt(limit));
+    sql += ` ORDER BY timestamp DESC LIMIT $${count}`;
+    params.push(parseInt(limit));
+
+    const result = await query(sql, params);
 
     res.json({
       success: true,
-      count: usage.length,
-      data: usage,
+      count: result.rows.length,
+      data: result.rows,
     });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * GET /api/usage/dashboard
- * Get aggregated dashboard statistics
- * Returns totals, averages, comparisons, and recent readings
- */
 const getDashboardStats = async (req, res, next) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user.id;
     const now = new Date();
-
-    // Time ranges for comparisons
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const thisWeekStart = new Date(today);
-    thisWeekStart.setDate(today.getDate() - today.getDay());
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
 
-    // Aggregate this month's totals by type
-    const thisMonthStats = await Usage.aggregate([
-      {
-        $match: {
-          userId: userId,
-          timestamp: { $gte: thisMonthStart },
-        },
-      },
-      {
-        $group: {
-          _id: '$type',
-          totalValue: { $sum: '$value' },
-          totalCost: { $sum: '$cost' },
-          avgValue: { $avg: '$value' },
-          count: { $sum: 1 },
-        },
-      },
-    ]);
+    // This month stats
+    const thisMonthRes = await query(
+      `SELECT type, SUM(value) as "totalValue", SUM(cost) as "totalCost", AVG(value) as "avgValue" 
+       FROM usage_data WHERE user_id = $1 AND timestamp >= $2 GROUP BY type`,
+      [userId, thisMonthStart]
+    );
 
-    // Aggregate last month's totals for comparison
-    const lastMonthStats = await Usage.aggregate([
-      {
-        $match: {
-          userId: userId,
-          timestamp: { $gte: lastMonthStart, $lte: lastMonthEnd },
-        },
-      },
-      {
-        $group: {
-          _id: '$type',
-          totalValue: { $sum: '$value' },
-          totalCost: { $sum: '$cost' },
-        },
-      },
-    ]);
+    // Last month stats
+    const lastMonthRes = await query(
+      `SELECT type, SUM(value) as "totalValue", SUM(cost) as "totalCost" 
+       FROM usage_data WHERE user_id = $1 AND timestamp >= $2 AND timestamp <= $3 GROUP BY type`,
+      [userId, lastMonthStart, lastMonthEnd]
+    );
 
-    // Get daily usage for the past 7 days (for line chart)
+    // Past 7 days (for chart)
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(today.getDate() - 7);
+    const dailyRes = await query(
+       `SELECT date_trunc('day', timestamp) as date, type, SUM(value) as "totalValue", SUM(cost) as "totalCost"
+        FROM usage_data WHERE user_id = $1 AND timestamp >= $2
+        GROUP BY date, type ORDER BY date ASC`,
+       [userId, sevenDaysAgo]
+    );
 
-    const dailyUsage = await Usage.aggregate([
-      {
-        $match: {
-          userId: userId,
-          timestamp: { $gte: sevenDaysAgo },
-        },
-      },
-      {
-        $group: {
-          _id: {
-            date: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
-            type: '$type',
-          },
-          totalValue: { $sum: '$value' },
-          totalCost: { $sum: '$cost' },
-        },
-      },
-      { $sort: { '_id.date': 1 } },
-    ]);
-
-    // Get monthly usage for the past 6 months (for bar chart)
+    // Past 6 months (for chart)
     const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const monthlyRes = await query(
+       `SELECT date_trunc('month', timestamp) as month, type, SUM(value) as "totalValue", SUM(cost) as "totalCost"
+        FROM usage_data WHERE user_id = $1 AND timestamp >= $2
+        GROUP BY month, type ORDER BY month ASC`,
+       [userId, sixMonthsAgo]
+    );
 
-    const monthlyUsage = await Usage.aggregate([
-      {
-        $match: {
-          userId: userId,
-          timestamp: { $gte: sixMonthsAgo },
-        },
-      },
-      {
-        $group: {
-          _id: {
-            month: { $dateToString: { format: '%Y-%m', date: '$timestamp' } },
-            type: '$type',
-          },
-          totalValue: { $sum: '$value' },
-          totalCost: { $sum: '$cost' },
-        },
-      },
-      { $sort: { '_id.month': 1 } },
-    ]);
-
-    // Format response data
-    const formatStats = (stats) => {
-      const water = stats.find(s => s._id === 'water') || { totalValue: 0, totalCost: 0, avgValue: 0, count: 0 };
-      const electricity = stats.find(s => s._id === 'electricity') || { totalValue: 0, totalCost: 0, avgValue: 0, count: 0 };
-      return { water, electricity };
+    // Process rows to match frontend format
+    const formatRows = (rows) => {
+        const water = rows.find(r => r.type === 'water') || { totalValue: 0, totalCost: 0, avgValue: 0 };
+        const electricity = rows.find(r => r.type === 'electricity') || { totalValue: 0, totalCost: 0, avgValue: 0 };
+        return { water, electricity };
     };
 
-    const current = formatStats(thisMonthStats);
-    const previous = formatStats(lastMonthStats);
+    const current = formatRows(thisMonthRes.rows);
+    const previous = formatRows(lastMonthRes.rows);
+    
+    // Map daily data to expected _id format
+    const dailyUsage = dailyRes.rows.map(r => ({
+        _id: { date: r.date.toISOString().split('T')[0], type: r.type },
+        totalValue: parseFloat(r.totalValue),
+        totalCost: parseFloat(r.totalCost)
+    }));
 
-    // Calculate savings (difference from last month)
-    const waterSavings = previous.water.totalCost - current.water.totalCost;
-    const electricitySavings = previous.electricity.totalCost - current.electricity.totalCost;
+    const monthlyUsage = monthlyRes.rows.map(r => ({
+        _id: { month: r.month.toISOString().slice(0, 7), type: r.type },
+        totalValue: parseFloat(r.totalValue),
+        totalCost: parseFloat(r.totalCost)
+    }));
 
-    // Get recent alerts
-    const recentAlerts = await Alert.find({ userId })
-      .sort({ timestamp: -1 })
-      .limit(5);
+    const recentAlertsRes = await query('SELECT * FROM alerts WHERE user_id = $1 ORDER BY timestamp DESC LIMIT 5', [userId]);
 
     res.json({
       success: true,
@@ -195,222 +188,171 @@ const getDashboardStats = async (req, res, next) => {
         current,
         previous,
         savings: {
-          water: parseFloat(waterSavings.toFixed(2)),
-          electricity: parseFloat(electricitySavings.toFixed(2)),
-          total: parseFloat((waterSavings + electricitySavings).toFixed(2)),
+          water: parseFloat((previous.water.totalCost - current.water.totalCost).toFixed(2)),
+          electricity: parseFloat((previous.electricity.totalCost - current.electricity.totalCost).toFixed(2)),
+          total: parseFloat(((previous.water.totalCost - current.water.totalCost) + (previous.electricity.totalCost - current.electricity.totalCost)).toFixed(2))
         },
         dailyUsage,
         monthlyUsage,
-        recentAlerts,
-      },
+        recentAlerts: recentAlertsRes.rows
+      }
     });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * POST /api/usage/simulate
- * Generate simulated IoT sensor data
- * Creates realistic random readings for demo purposes
- */
 const simulateIoT = async (req, res, next) => {
   try {
     const { days = 1 } = req.body;
-    const readings = [];
     const now = new Date();
+    let totalInserted = 0;
 
-    // Generate readings for each day
     for (let d = 0; d < Math.min(days, 30); d++) {
       const date = new Date(now);
       date.setDate(date.getDate() - d);
 
-      // Generate 4-8 water readings per day (realistic household pattern)
-      const waterReadings = Math.floor(Math.random() * 5) + 4;
-      for (let i = 0; i < waterReadings; i++) {
+      // Water readings
+      const waterCount = Math.floor(Math.random() * 5) + 4;
+      for (let i = 0; i < waterCount; i++) {
         const hour = Math.floor(Math.random() * 24);
-        const readingDate = new Date(date);
-        readingDate.setHours(hour, Math.floor(Math.random() * 60));
-
-        // Water usage varies by time of day (higher in morning and evening)
-        let baseUsage = 20 + Math.random() * 40;
-        if (hour >= 6 && hour <= 9) baseUsage *= 1.5;  // Morning peak
-        if (hour >= 18 && hour <= 21) baseUsage *= 1.3; // Evening peak
-
-        readings.push({
-          userId: req.user._id,
-          type: 'water',
-          value: parseFloat(baseUsage.toFixed(1)),
-          source: 'iot',
-          timestamp: readingDate,
-        });
+        const ts = new Date(date);
+        ts.setHours(hour, Math.floor(Math.random() * 60));
+        let val = 20 + Math.random() * 40;
+        if (hour >= 6 && hour <= 9) val *= 1.5;
+        await query(
+           'INSERT INTO usage_data (user_id, state, type, value, unit, cost, source, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+           [req.user.id, req.user.state, 'water', val, 'liters', val * 0.05, 'iot', ts]
+        );
+        totalInserted++;
       }
 
-      // Generate 24 electricity readings per day (hourly smart meter)
-      for (let hour = 0; hour < 24; hour++) {
-        const readingDate = new Date(date);
-        readingDate.setHours(hour, 0);
-
-        // Electricity varies: low at night, peaks during day
-        let baseUsage = 0.5 + Math.random() * 1;
-        if (hour >= 7 && hour <= 9) baseUsage = 2 + Math.random() * 2;   // Morning
-        if (hour >= 12 && hour <= 14) baseUsage = 1.5 + Math.random() * 1.5; // Afternoon
-        if (hour >= 18 && hour <= 23) baseUsage = 2.5 + Math.random() * 3;  // Evening peak
-        if (hour >= 0 && hour <= 5) baseUsage = 0.3 + Math.random() * 0.5;  // Night low
-
-        readings.push({
-          userId: req.user._id,
-          type: 'electricity',
-          value: parseFloat(baseUsage.toFixed(2)),
-          source: 'iot',
-          timestamp: readingDate,
-        });
+      // Electricity readings
+      for (let h = 0; h < 24; h++) {
+        const ts = new Date(date);
+        ts.setHours(h, 0);
+        let val = 0.5 + Math.random() * 1;
+        if (h >= 18 && h <= 23) val = 2.5 + Math.random() * 3;
+        await query(
+           'INSERT INTO usage_data (user_id, state, type, value, unit, cost, source, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+           [req.user.id, req.user.state, 'electricity', val, 'kWh', val * 8, 'iot', ts]
+        );
+        totalInserted++;
       }
     }
 
-    // Bulk insert all readings
-    const inserted = await Usage.insertMany(readings);
-
-    res.status(201).json({
-      success: true,
-      message: `Generated ${inserted.length} IoT readings for ${days} day(s)`,
-      count: inserted.length,
-    });
+    res.status(201).json({ success: true, count: totalInserted });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * GET /api/usage/leaderboard
- * Get the most efficient users ranked by their efficiency scores
- * Efficiency = lower cost per reading = better
- */
 const getLeaderboard = async (req, res, next) => {
   try {
-    const leaderboard = await Usage.aggregate([
-      // Group by user and calculate total usage and cost
-      {
-        $group: {
-          _id: '$userId',
-          totalWaterValue: {
-            $sum: { $cond: [{ $eq: ['$type', 'water'] }, '$value', 0] },
-          },
-          totalElectricityValue: {
-            $sum: { $cond: [{ $eq: ['$type', 'electricity'] }, '$value', 0] },
-          },
-          totalCost: { $sum: '$cost' },
-          readingCount: { $sum: 1 },
-        },
-      },
-      // Calculate efficiency score (lower is better)
-      {
-        $addFields: {
-          efficiencyScore: {
-            $cond: [
-              { $gt: ['$readingCount', 0] },
-              { $divide: ['$totalCost', '$readingCount'] },
-              0,
-            ],
-          },
-        },
-      },
-      // Sort by efficiency (ascending - lower cost per reading is better)
-      { $sort: { efficiencyScore: 1 } },
-      // Limit to top 10
-      { $limit: 10 },
-      // Join with User collection to get names
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user',
-        },
-      },
-      { $unwind: '$user' },
-      // Format the output
-      {
-        $project: {
-          _id: 1,
-          name: '$user.name',
-          avatar: '$user.avatar',
-          badges: '$user.badges',
-          totalCost: { $round: ['$totalCost', 2] },
-          totalWaterValue: { $round: ['$totalWaterValue', 1] },
-          totalElectricityValue: { $round: ['$totalElectricityValue', 2] },
-          efficiencyScore: { $round: ['$efficiencyScore', 4] },
-          readingCount: 1,
-        },
-      },
-    ]);
+    const result = await query(`
+      SELECT 
+        u.id, u.name, u.avatar, u.badges,
+        SUM(CASE WHEN d.type = 'water' THEN d.value ELSE 0 END) as "totalWaterValue",
+        SUM(CASE WHEN d.type = 'electricity' THEN d.value ELSE 0 END) as "totalElectricityValue",
+        SUM(d.cost) as "totalCost",
+        COUNT(d.id) as "readingCount",
+        (SUM(d.cost) / NULLIF(COUNT(d.id), 0)) as "efficiencyScore"
+      FROM users u
+      LEFT JOIN usage_data d ON u.id = d.user_id
+      GROUP BY u.id
+      ORDER BY "efficiencyScore" ASC NULLS LAST
+      LIMIT 10
+    `);
 
-    res.json({
-      success: true,
-      data: leaderboard,
-    });
+    res.json({ success: true, data: result.rows });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * GET /api/usage/carbon
- * Estimate carbon footprint based on electricity usage
- * Uses global average: 0.42 kg CO₂ per kWh
- */
+const getMapStateStats = async (req, res, next) => {
+  try {
+    const ALL_INDIAN_STATES = [
+      'Andaman and Nicobar Islands', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chandigarh', 
+      'Chhattisgarh', 'Dadra and Nagar Haveli', 'Daman and Diu', 'Goa', 'Gujarat', 
+      'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Lakshadweep', 
+      'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 
+      'Delhi', 'Puducherry', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 
+      'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Odisha', 'Andhra Pradesh', 
+      'Jammu and Kashmir', 'Ladakh'
+    ];
+
+    const result = await query(
+      'SELECT state, type, AVG(value) as "avgValue" FROM usage_data GROUP BY state, type'
+    );
+
+    const formattedData = {};
+    const getRegion = (s) => {
+      const north = ['Punjab','Haryana','Himachal Pradesh','Jammu and Kashmir','Ladakh','Rajasthan','Chandigarh','Delhi','Uttarakhand','Uttar Pradesh'];
+      const south = ['Andhra Pradesh','Karnataka','Kerala','Tamil Nadu','Telangana','Lakshadweep','Daman and Diu'];
+      const east  = ['Bihar','Jharkhand','Odisha','West Bengal','Andaman and Nicobar Islands'];
+      const west  = ['Goa','Gujarat','Maharashtra','Dadra and Nagar Haveli'];
+      const north_east    = ['Arunachal Pradesh','Assam','Manipur','Meghalaya','Mizoram','Nagaland','Sikkim','Tripura'];
+      
+      if (north.includes(s)) return 'North';
+      if (south.includes(s)) return 'South';
+      if (east.includes(s)) return 'East';
+      if (west.includes(s)) return 'West';
+      if (north_east.includes(s)) return 'NE';
+      return 'Central';
+    };
+
+    ALL_INDIAN_STATES.forEach(state => {
+      const baseWater = 80 + Math.random() * 100;
+      formattedData[state] = { 
+        water: parseFloat(baseWater.toFixed(1)), 
+        electricity: parseFloat((2 + Math.random() * 6).toFixed(2)),
+        pop: Math.floor(Math.random() * 50) + 1,
+        trend: Math.random() > 0.5 ? 'up' : 'down',
+        region: getRegion(state),
+        alerts: Math.floor(Math.random() * 15),
+        renewable: Math.floor(Math.random() * 60) + 10,
+        monthly: [70, 85, 90, 80, 95, 100, 80],
+        yearly: [800, 850, 900, 950, 1000]
+      };
+    });
+
+    result.rows.forEach(stat => {
+      if (formattedData[stat.state]) {
+        if (stat.type === 'water') formattedData[stat.state].water = parseFloat(parseFloat(stat.avgValue).toFixed(1));
+        if (stat.type === 'electricity') formattedData[stat.state].electricity = parseFloat(parseFloat(stat.avgValue).toFixed(2));
+      }
+    });
+
+    res.json({ success: true, data: formattedData });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getCarbonFootprint = async (req, res, next) => {
   try {
     const { period = 'month' } = req.query;
-    const now = new Date();
-    let startDate;
+    let startDate = new Date();
+    startDate.setDate(1);
 
-    // Determine period start date
-    switch (period) {
-      case 'week':
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - 7);
-        break;
-      case 'year':
-        startDate = new Date(now.getFullYear(), 0, 1);
-        break;
-      case 'month':
-      default:
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    }
+    const result = await query(
+      'SELECT SUM(value) as "totalKwh" FROM usage_data WHERE user_id = $1 AND type = \'electricity\' AND timestamp >= $2',
+      [req.user.id, startDate]
+    );
 
-    // Aggregate electricity usage for the period
-    const result = await Usage.aggregate([
-      {
-        $match: {
-          userId: req.user._id,
-          type: 'electricity',
-          timestamp: { $gte: startDate },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalKwh: { $sum: '$value' },
-        },
-      },
-    ]);
-
-    const totalKwh = result.length > 0 ? result[0].totalKwh : 0;
-    // CO₂ emission factor: 0.42 kg CO₂ per kWh (global average)
+    const totalKwh = parseFloat(result.rows[0]?.totalKwh || 0);
     const carbonKg = parseFloat((totalKwh * 0.42).toFixed(2));
-    // Trees needed to offset (1 tree absorbs ~22 kg CO₂/year)
-    const treesNeeded = Math.ceil(carbonKg / 22);
 
     res.json({
       success: true,
       data: {
-        totalKwh: parseFloat(totalKwh.toFixed(2)),
+        totalKwh,
         carbonKg,
         carbonTons: parseFloat((carbonKg / 1000).toFixed(4)),
-        treesNeeded,
-        period,
-      },
+        treesNeeded: Math.ceil(carbonKg / 22),
+        period
+      }
     });
   } catch (error) {
     next(error);
@@ -418,41 +360,89 @@ const getCarbonFootprint = async (req, res, next) => {
 };
 
 /**
- * Helper: Check usage against thresholds and create alerts
- * Called automatically when new usage data is added
+ * Utility for alerts
  */
 async function checkAndCreateAlert(user, type, value) {
-  const threshold = type === 'water'
-    ? user.settings?.waterThreshold || 500
-    : user.settings?.electricityThreshold || 50;
+  const threshold = type === 'water' ? user.settings?.waterThreshold || 500 : user.settings?.electricityThreshold || 50;
+  if (value <= threshold) return;
 
-  // Determine severity based on how much the threshold is exceeded
-  let severity = 'green';
-  let message = '';
+  const severity = value > threshold * 1.5 ? 'red' : 'yellow';
+  const message = `${severity === 'red' ? '🚨' : '⚠️'} ${type} usage (${value}) exceeds your limit of ${threshold}`;
 
-  if (value > threshold * 1.5) {
-    severity = 'red';
-    message = `🚨 Critical: ${type} usage (${value}) is ${Math.round((value / threshold - 1) * 100)}% above your threshold of ${threshold}`;
-  } else if (value > threshold * 1.2) {
-    severity = 'yellow';
-    message = `⚠️ Warning: ${type} usage (${value}) is approaching your limit of ${threshold}`;
-  } else if (value > threshold) {
-    severity = 'yellow';
-    message = `📊 Notice: ${type} usage (${value}) slightly exceeds your threshold of ${threshold}`;
-  }
+  const alertRes = await query(
+    'INSERT INTO alerts (user_id, type, severity, message, threshold, actual_value) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+    [user.id, type, severity, message, threshold, value]
+  );
 
-  // Only create alert if threshold was exceeded
-  if (severity !== 'green') {
-    await Alert.create({
-      userId: user._id,
-      type,
-      severity,
-      message,
-      threshold,
-      actualValue: value,
-    });
-  }
+  sendAlertEmail(user, alertRes.rows[0]).catch(e => console.error('Alert Email Error:', e));
 }
+
+const getTariffEstimate = async (req, res, next) => {
+  try {
+    const stateKey = (req.query.state || 'default').toLowerCase();
+    const electricityUnits = Math.max(0, parseFloat(req.query.electricityUnits || 0));
+    const waterLiters = Math.max(0, parseFloat(req.query.waterLiters || 0));
+
+    // Try finding exact state from SQL, otherwise fallback to hardcoded
+    const tariffRes = await query('SELECT * FROM tariffs WHERE state = $1', [stateKey]);
+    let tariffs = INDIA_TARIFFS[stateKey] || INDIA_TARIFFS.default;
+    
+    if (tariffRes.rows.length > 0) {
+      tariffs = {
+        electricity: tariffRes.rows[0].electricity,
+        water: tariffRes.rows[0].water
+      };
+    }
+    const calculate = (val, slabs) => {
+        let total = 0;
+        let rem = val;
+        let prev = 0;
+        for (const s of slabs) {
+            const size = s.upto === Infinity ? rem : s.upto - prev;
+            const use = Math.min(rem, size);
+            total += use * s.rate;
+            rem -= use;
+            prev = s.upto;
+            if (rem <= 0) break;
+        }
+        return total;
+    };
+
+    const electricity = calculate(electricityUnits, tariffs.electricity);
+    const water = calculate(waterLiters, tariffs.water);
+
+    res.json({
+      success: true,
+      data: {
+        state: stateKey,
+        totalEstimatedBill: parseFloat((electricity + water).toFixed(2)),
+        currency: 'INR'
+      }
+    });
+  } catch (error) { next(error); }
+};
+
+const getTariffTemplate = (req, res) => {
+    res.json(INDIA_TARIFFS);
+};
+
+const uploadTariffs = async (req, res) => {
+    try {
+        const tariffUploadMap = req.body;
+        let updatedCount = 0;
+
+        for (const [stateKey, data] of Object.entries(tariffUploadMap)) {
+            await query(
+                'INSERT INTO tariffs (state, electricity, water, updated_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT (state) DO UPDATE SET electricity = $2, water = $3, updated_at = NOW()',
+                [stateKey.toLowerCase(), JSON.stringify(data.electricity), JSON.stringify(data.water)]
+            );
+            updatedCount++;
+        }
+        res.json({ success: true, message: `Successfully updated ${updatedCount} state tariffs!` });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
 
 module.exports = {
   addUsage,
@@ -460,5 +450,9 @@ module.exports = {
   getDashboardStats,
   simulateIoT,
   getLeaderboard,
+  getMapStateStats,
   getCarbonFootprint,
+  getTariffEstimate,
+  getTariffTemplate,
+  uploadTariffs
 };

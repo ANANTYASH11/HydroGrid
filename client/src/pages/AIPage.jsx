@@ -1,53 +1,71 @@
 import React from 'react';
 import AIInsights from '../components/AIInsights';
+import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 
 const AIPage = () => {
+  const { t } = useLanguage();
+  const { isDark } = useTheme();
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">🤖 AI & Smart Analytics</h1>
-          <p className="text-gray-300">
-            Intelligent insights, anomaly detection, forecasting, and personalized recommendations
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className={`text-2xl font-bold flex items-center gap-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          � {t.aiAnalytics || 'AI & Smart Analytics'}
+        </h1>
+        <p className={`text-sm mt-1 ${isDark ? 'text-dark-400' : 'text-gray-500'}`}>
+          {t.aiSubtitle || 'Intelligent insights, anomaly detection, forecasting, and personalized recommendations'}
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="glass-card p-5">
+            <p className={`text-xs uppercase tracking-[0.3em] ${isDark ? 'text-dark-400' : 'text-gray-500'}`}>{t.forecastConfidence || 'Forecast confidence'}</p>
+            <p className={`mt-3 text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>92%</p>
+          </div>
+          <div className="glass-card p-5">
+            <p className={`text-xs uppercase tracking-[0.3em] ${isDark ? 'text-dark-400' : 'text-gray-500'}`}>{t.anomalyAlerts || 'Anomaly alerts'}</p>
+            <p className={`mt-3 text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Real-time ready</p>
+          </div>
+          <div className="glass-card p-5">
+            <p className={`text-xs uppercase tracking-[0.3em] ${isDark ? 'text-dark-400' : 'text-gray-500'}`}>{t.savingsGuidance || 'Savings guidance'}</p>
+            <p className={`mt-3 text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Top 5 actions</p>
+          </div>
+        </div>
+      </div>
+
+      {/* AI Insights Section */}
+      <AIInsights />
+
+      {/* Info Cards */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="glass-card p-6">
+          <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>🔍 {t.anomalyDetectionTitle}</h3>
+          <p className={`text-sm ${isDark ? 'text-dark-300' : 'text-gray-600'}`}>
+            {t.anomalyDetectionDesc}
           </p>
         </div>
-
-        {/* AI Insights Section */}
-        <AIInsights />
-
-        {/* Info Cards */}
-        <div className="grid md:grid-cols-3 gap-4 mt-8">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-bold mb-2">🚨 Anomaly Detection</h3>
-            <p className="text-gray-600 text-sm">
-              Detects unusual usage patterns using statistical analysis. Get alerted to potential leaks or equipment failures before they become expensive problems.
-            </p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-bold mb-2">📊 Forecasting</h3>
-            <p className="text-gray-600 text-sm">
-              Predicts your usage for the next 30 days using time-series analysis. Plan your budget and identify seasonal patterns accurately.
-            </p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-bold mb-2">💡 Smart Recommendations</h3>
-            <p className="text-gray-600 text-sm">
-              Personalized suggestions to reduce consumption. Learn which appliances use the most energy and optimal times to use them.
-            </p>
-          </div>
+        <div className="glass-card p-6">
+          <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>📈 {t.forecastingTitle}</h3>
+          <p className={`text-sm ${isDark ? 'text-dark-300' : 'text-gray-600'}`}>
+            {t.forecastingDesc}
+          </p>
         </div>
-
-        {/* Coming Soon */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 p-6 rounded-lg">
-          <h3 className="text-lg font-bold text-blue-900 mb-2">🚀 Coming Soon</h3>
-          <ul className="text-blue-800 text-sm space-y-1">
-            <li>✨ Natural Language AI Chat - Ask questions naturally like "Why is my bill higher?"</li>
-            <li>✨ IoT Device Tagging - Automatically identify individual appliances</li>
-            <li>✨ Real-time Alerts - Instant notifications for anomalies</li>
-            <li>✨ Demand Response - Automatically optimize based on peak pricing</li>
-          </ul>
+        <div className="glass-card p-6">
+          <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>💡 {t.smartRecommTitle}</h3>
+          <p className={`text-sm ${isDark ? 'text-dark-300' : 'text-gray-600'}`}>
+            {t.smartRecommDesc}
+          </p>
         </div>
+      </div>
+
+      {/* Coming Soon */}
+      <div className="glass-card border-primary-500/30 p-6">
+        <h3 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>� {t.comingSoon || 'Coming Soon'}</h3>
+        <ul className={`text-sm space-y-1 ${isDark ? 'text-dark-300' : 'text-gray-600'}`}>
+          {(t.comingSoonItems || []).map((item, i) => (
+            <li key={i}>✨ {item}</li>
+          ))}
+        </ul>
       </div>
     </div>
   );

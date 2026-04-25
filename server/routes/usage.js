@@ -17,6 +17,10 @@ const {
   simulateIoT,
   getLeaderboard,
   getCarbonFootprint,
+  getTariffEstimate,
+  getMapStateStats,
+  getTariffTemplate,
+  uploadTariffs,
 } = require('../controllers/usageController');
 const { protect } = require('../middleware/auth');
 
@@ -29,5 +33,9 @@ router.get('/dashboard', getDashboardStats);
 router.post('/simulate', simulateIoT);
 router.get('/leaderboard', getLeaderboard);
 router.get('/carbon', getCarbonFootprint);
+router.get('/tariff-estimate', getTariffEstimate);
+router.get('/tariff-template', getTariffTemplate);
+router.post('/upload-tariffs', uploadTariffs);
+router.get('/map', getMapStateStats);
 
 module.exports = router;

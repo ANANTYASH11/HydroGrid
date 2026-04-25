@@ -17,7 +17,7 @@ const alertSchema = new mongoose.Schema({
   // Type of resource the alert is about
   type: {
     type: String,
-    enum: ['water', 'electricity', 'system'],
+    enum: ['water', 'electricity', 'system', 'prediction', 'anomaly'],
     required: true,
   },
   // Severity level determines the color coding in the UI

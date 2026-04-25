@@ -1,68 +1,44 @@
-const User = require('../models/User');
-const Usage = require('../models/Usage');
-const Alert = require('../models/Alert');
-
 /**
- * Get system statistics for admin dashboard
- * @route GET /api/admin/stats
- * @access Private/Admin
+ * Admin Controller (Supabase/Postgres version)
  */
-exports.getStats = async (req, res) => {
-  try {
-    const totalUsers = await User.countDocuments();
-    const totalRecords = await Usage.countDocuments();
-    const activeAlerts = await Alert.countDocuments({ read: false });
 
-    // Get active users today
+const { query } = require('../config/db');
+
+const getStats = async (req, res) => {
+  try {
+    const userCount = await query('SELECT COUNT(*) FROM users');
+    const recordCount = await query('SELECT COUNT(*) FROM usage_data');
+    const alertCount = await query('SELECT COUNT(*) FROM alerts WHERE read = false');
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const activeToday = await Usage.distinct('userId', {
-      timestamp: { $gte: today }
-    }).then(ids => ids.length);
+    const activeToday = await query('SELECT COUNT(DISTINCT user_id) FROM usage_data WHERE timestamp >= $1', [today]);
 
-    // Get records from this week
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    const recordsThisWeek = await Usage.countDocuments({
-      timestamp: { $gte: weekAgo }
-    });
+    const weekRecords = await query('SELECT COUNT(*) FROM usage_data WHERE timestamp >= $1', [weekAgo]);
 
     res.json({
-      totalUsers,
-      activeToday,
-      totalRecords,
-      recordsThisWeek,
-      activeAlerts,
-      systemHealth: {
-        database: 'connected',
-        api: 'running',
-        responseTime: '85ms'
-      }
+      totalUsers: parseInt(userCount.rows[0].count),
+      activeToday: parseInt(activeToday.rows[0].count),
+      totalRecords: parseInt(recordCount.rows[0].count),
+      recordsThisWeek: parseInt(weekRecords.rows[0].count),
+      activeAlerts: parseInt(alertCount.rows[0].count),
+      systemHealth: { database: 'connected', api: 'running' }
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-/**
- * Get all users with their info
- * @route GET /api/admin/users
- * @access Private/Admin
- */
-exports.getUsers = async (req, res) => {
+const getUsers = async (req, res) => {
   try {
-    const users = await User.find().select('-password').sort({ createdAt: -1 });
+    const users = await query('SELECT id as "_id", name, email, role, state, created_at as "createdAt" FROM users ORDER BY created_at DESC');
     
-    // Enrich with usage data
-    const enrichedUsers = await Promise.all(
-      users.map(async (user) => {
-        const recordCount = await Usage.countDocuments({ userId: user._id });
-        return {
-          ...user.toObject(),
-          recordCount
-        };
-      })
-    );
+    const enrichedUsers = await Promise.all(users.rows.map(async (u) => {
+        const count = await query('SELECT COUNT(*) FROM usage_data WHERE user_id = $1', [u._id]);
+        return { ...u, recordCount: parseInt(count.rows[0].count) };
+    }));
 
     res.json(enrichedUsers);
   } catch (error) {
@@ -70,171 +46,42 @@ exports.getUsers = async (req, res) => {
   }
 };
 
-/**
- * Get system overview data
- * @route GET /api/admin/overview
- * @access Private/Admin
- */
-exports.getOverview = async (req, res) => {
+const getOverview = async (req, res) => {
   try {
-    // Get data from last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const newUsers = await User.countDocuments({
-      createdAt: { $gte: thirtyDaysAgo }
-    });
-
-    const newRecords = await Usage.countDocuments({
-      timestamp: { $gte: thirtyDaysAgo }
-    });
-
-    const avgRecordsPerUser = await Usage.aggregate([
-      {
-        $group: {
-          _id: '$userId',
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          avgCount: { $avg: '$count' }
-        }
-      }
-    ]);
+    const newUsers = await query('SELECT COUNT(*) FROM users WHERE created_at >= $1', [thirtyDaysAgo]);
+    const newRecords = await query('SELECT COUNT(*) FROM usage_data WHERE timestamp >= $1', [thirtyDaysAgo]);
+    
+    const avgRes = await query(`
+        SELECT AVG(count) as avgCount FROM (
+            SELECT COUNT(*) as count FROM usage_data GROUP BY user_id
+        ) s
+    `);
 
     res.json({
       lastMonth: {
-        newUsers,
-        newRecords,
-        avgRecordsPerUser: avgRecordsPerUser[0]?.avgCount || 0
-      },
-      topUsers: await getTopUsers(),
-      recentActivity: await getRecentActivity()
+        newUsers: parseInt(newUsers.rows[0].count),
+        newRecords: parseInt(newRecords.rows[0].count),
+        avgRecordsPerUser: parseFloat(avgRes.rows[0]?.avgcount || 0)
+      }
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-/**
- * Get top users by activity
- */
-async function getTopUsers() {
+const getDashboard = async (req, res) => {
   try {
-    const topUsers = await Usage.aggregate([
-      {
-        $group: {
-          _id: '$userId',
-          recordCount: { $sum: 1 },
-          lastUsed: { $max: '$timestamp' }
-        }
-      },
-      { $sort: { recordCount: -1 } },
-      { $limit: 5 },
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user'
-        }
-      },
-      { $unwind: '$user' }
-    ]);
-
-    return topUsers.map(item => ({
-      userId: item._id,
-      name: item.user.name,
-      records: item.recordCount,
-      lastUsed: item.lastUsed
-    }));
-  } catch (error) {
-    console.error('Error getting top users:', error);
-    return [];
-  }
-}
-
-/**
- * Get recent activity
- */
-async function getRecentActivity() {
-  try {
-    const recentUsage = await Usage.find()
-      .sort({ timestamp: -1 })
-      .limit(10)
-      .populate('userId', 'name email');
-
-    return recentUsage.map(item => ({
-      timestamp: item.timestamp,
-      userName: item.userId?.name || 'Unknown',
-      userEmail: item.userId?.email || 'Unknown',
-      water: item.water,
-      electricity: item.electricity
-    }));
-  } catch (error) {
-    console.error('Error getting recent activity:', error);
-    return [];
-  }
-}
-
-/**
- * Get admin dashboard data
- * @route GET /api/admin/dashboard
- * @access Private/Admin
- */
-exports.getDashboard = async (req, res) => {
-  try {
-    const [stats, overview, users] = await Promise.all([
-      exports.getStats.call(
-        { status: () => ({ json: (data) => data }) },
-        req,
-        { status: () => ({ json: (data) => data }), json: (data) => data }
-      ),
-      exports.getOverview.call(
-        { status: () => ({ json: (data) => data }) },
-        req,
-        { status: () => ({ json: (data) => data }), json: (data) => data }
-      ),
-      User.find().select('-password').limit(5).sort({ createdAt: -1 })
-    ]);
-
+    const stats = await query('SELECT COUNT(*) as users, (SELECT COUNT(*) FROM usage_data) as records FROM users');
     res.json({
-      stats: await getStats(),
-      overview,
-      recentUsers: users
+        stats: stats.rows[0],
+        recentUsers: (await query('SELECT * FROM users ORDER BY created_at DESC LIMIT 5')).rows
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-/**
- * Helper to get stats synchronously
- */
-async function getStats() {
-  const totalUsers = await User.countDocuments();
-  const totalRecords = await Usage.countDocuments();
-  const activeAlerts = await Alert.countDocuments({ read: false });
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const activeToday = await Usage.distinct('userId', {
-    timestamp: { $gte: today }
-  }).then(ids => ids.length);
-
-  const weekAgo = new Date();
-  weekAgo.setDate(weekAgo.getDate() - 7);
-  const recordsThisWeek = await Usage.countDocuments({
-    timestamp: { $gte: weekAgo }
-  });
-
-  return {
-    totalUsers,
-    activeToday,
-    totalRecords,
-    recordsThisWeek,
-    activeAlerts
-  };
-}
+module.exports = { getStats, getUsers, getOverview, getDashboard };
