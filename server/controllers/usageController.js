@@ -71,6 +71,10 @@ const addUsage = async (req, res, next) => {
     );
 
     const usage = result.rows[0];
+    
+    // Ensure numeric values are numbers, not strings
+    usage.value = parseFloat(usage.value);
+    usage.cost = parseFloat(usage.cost);
 
     checkAndCreateAlert(req.user, type, value).catch(err => console.error('Alert Error:', err));
 
@@ -161,7 +165,20 @@ const getDashboardStats = async (req, res, next) => {
     const formatRows = (rows) => {
         const water = rows.find(r => r.type === 'water') || { totalValue: 0, totalCost: 0, avgValue: 0 };
         const electricity = rows.find(r => r.type === 'electricity') || { totalValue: 0, totalCost: 0, avgValue: 0 };
-        return { water, electricity };
+        
+        // Convert SQL numeric strings to floats
+        return { 
+          water: {
+            totalValue: parseFloat(water.totalValue || 0),
+            totalCost: parseFloat(water.totalCost || 0),
+            avgValue: parseFloat(water.avgValue || 0)
+          }, 
+          electricity: {
+            totalValue: parseFloat(electricity.totalValue || 0),
+            totalCost: parseFloat(electricity.totalCost || 0),
+            avgValue: parseFloat(electricity.avgValue || 0)
+          } 
+        };
     };
 
     const current = formatRows(thisMonthRes.rows);
@@ -264,7 +281,16 @@ const getLeaderboard = async (req, res, next) => {
       LIMIT 10
     `);
 
-    res.json({ success: true, data: result.rows });
+    res.json({ 
+      success: true, 
+      data: result.rows.map(r => ({
+        ...r,
+        totalWaterValue: parseFloat(r.totalWaterValue || 0),
+        totalElectricityValue: parseFloat(r.totalElectricityValue || 0),
+        totalCost: parseFloat(r.totalCost || 0),
+        efficiencyScore: parseFloat(r.efficiencyScore || 0)
+      })) 
+    });
   } catch (error) {
     next(error);
   }

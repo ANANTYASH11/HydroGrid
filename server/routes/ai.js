@@ -59,7 +59,7 @@ router.get('/detect-anomalies', async (req, res) => {
     const cached = getCachedResponse(req, 'anomalies');
     if (cached) return res.json(cached);
 
-    const usageContext = await getUserUsageContext(req.user._id, 30);
+    const usageContext = await getUserUsageContext(req.user.id, 30);
     const groq = getGroqAI();
     
     if (!groq.enabled || usageContext.length < 5) return res.json({ success: true, anomalies: [] });
@@ -96,7 +96,7 @@ router.get('/predict-next-30-days', async (req, res) => {
     const cached = getCachedResponse(req, 'forecast');
     if (cached) return res.json(cached);
 
-    const usageContext = await getUserUsageContext(req.user._id, 30);
+    const usageContext = await getUserUsageContext(req.user.id, 30);
     const groq = getGroqAI();
     if (!groq.enabled || usageContext.length < 5) return res.json({ success: true, forecast: [] });
 
@@ -134,7 +134,7 @@ router.get('/recommendations', async (req, res) => {
     const cached = getCachedResponse(req, 'recommendations');
     if (cached) return res.json(cached);
 
-    const usageContext = await getUserUsageContext(req.user._id, 30);
+    const usageContext = await getUserUsageContext(req.user.id, 30);
     const groq = getGroqAI();
     if (!groq.enabled || usageContext.length < 5) return res.json({ success: true, recommendations: [] });
 
@@ -168,7 +168,7 @@ router.get('/device-breakdown', async (req, res) => {
     const cached = getCachedResponse(req, 'breakdown');
     if (cached) return res.json(cached);
 
-    const usageContext = await getUserUsageContext(req.user._id, 30);
+    const usageContext = await getUserUsageContext(req.user.id, 30);
     const groq = getGroqAI();
     if (!groq.enabled || usageContext.length < 5) return res.json({ success: true, devices: [] });
 
@@ -202,7 +202,7 @@ router.get('/analytics', async (req, res) => {
     const cached = getCachedResponse(req, 'analytics');
     if (cached) return res.json(cached);
 
-    const usageContext = await getUserUsageContext(req.user._id, 30);
+    const usageContext = await getUserUsageContext(req.user.id, 30);
     const groq = getGroqAI();
     if (!groq.enabled || usageContext.length < 5) return res.json({ success: true, analytics: {} });
 

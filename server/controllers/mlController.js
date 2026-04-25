@@ -83,7 +83,11 @@ const getStatesAnalysis = async (req, res) => {
     const stateMap = {};
     usageRes.rows.forEach(r => {
         if (!stateMap[r.state]) stateMap[r.state] = { state: r.state, water: null, electricity: null, userCount: userMap[r.state] || 0 };
-        stateMap[r.state][r.type] = { totalUsage: r.totalUsage, avgUsage: r.avgUsage, readings: r.readings };
+        stateMap[r.state][r.type] = { 
+          totalUsage: parseFloat(r.totalUsage || 0), 
+          avgUsage: parseFloat(r.avgUsage || 0), 
+          readings: parseInt(r.readings || 0) 
+        };
     });
 
     res.json({ success: true, data: Object.values(stateMap) });
@@ -105,7 +109,13 @@ const getStateInsights = async (req, res) => {
       data: {
         state,
         timestamp: new Date(),
-        insights: result.rows,
+        insights: result.rows.map(r => ({
+          ...r,
+          totalUsage: parseFloat(r.totalUsage || 0),
+          avgDaily: parseFloat(r.avgDaily || 0),
+          maxUsage: parseFloat(r.maxUsage || 0),
+          minUsage: parseFloat(r.minUsage || 0)
+        })),
         recommendations: [
            { type: 'water', title: 'Check Leaks', description: 'Your usage is 10% above neighbors.' }
         ]
