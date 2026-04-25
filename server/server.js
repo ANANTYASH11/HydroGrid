@@ -36,12 +36,22 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    // Allow localhost on any port for development
-    if (origin.match(/^http:\/\/localhost:\d+$/)) {
-      return callback(null, true);
+    const allowedOrigins = [
+      process.env.CLIENT_URL,
+      'http://localhost:5173',
+      'http://localhost:3000'
+    ];
+
+    // Check if origin is in the allowed list or is a vercel.app subdomain
+    const isAllowed = allowedOrigins.includes(origin) || 
+                      origin.match(/^http:\/\/localhost:\d+$/) ||
+                      origin.endsWith('.vercel.app');
+
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
     }
-    
-    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
 }));
