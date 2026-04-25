@@ -34,7 +34,7 @@ const sendAlertEmail = async (user, alert) => {
     const htmlContent = getAlertEmailTemplate(user, alert);
 
     const mailOptions = {
-      from: '"HydroGrid Alert System" <alerts@hydrogrid.com>',
+      from: `"HydroGrid Alert System" <${process.env.SMTP_USER}>`,
       to: user.email,
       subject: subject,
       html: htmlContent,
@@ -56,7 +56,7 @@ const sendAlertEmail = async (user, alert) => {
 const sendWelcomeEmail = async (user) => {
   try {
     const mailOptions = {
-      from: '"HydroGrid Team" <welcome@hydrogrid.com>',
+      from: `"HydroGrid Team" <${process.env.SMTP_USER}>`,
       to: user.email,
       subject: 'Welcome to HydroGrid - Smart Water & Electricity Intelligence',
       html: `
@@ -99,7 +99,7 @@ const sendPasswordResetEmail = async (user, resetToken) => {
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
 
     const mailOptions = {
-      from: '"HydroGrid Security" <security@hydrogrid.com>',
+      from: `"HydroGrid Security" <${process.env.SMTP_USER}>`,
       to: user.email,
       subject: 'Password Reset Request - HydroGrid',
       html: `
