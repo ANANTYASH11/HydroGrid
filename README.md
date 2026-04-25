@@ -1,7 +1,7 @@
 # HydroGrid: Smart Water & Electricity Intelligence Platform
 
 A production-level, full-stack SaaS web application for tracking, analyzing, and optimizing water and electricity consumption using AI-powered insights, predictive analytics, and real-time monitoring. 
-
+ 
 ![Tech Stack](https://img.shields.io/badge/React-18-61dafb?logo=react) ![Node](https://img.shields.io/badge/Node.js-Express-339933?logo=nodedotjs) ![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-47A248?logo=mongodb) ![TailwindCSS](https://img.shields.io/badge/Tailwind-CSS_3-06B6D4?logo=tailwindcss)
 
 --- 
