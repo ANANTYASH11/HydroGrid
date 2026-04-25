@@ -16,7 +16,7 @@ function CustomTooltip({ active, payload, label }) {
         <div key={index} className="flex items-center gap-2 text-sm">
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
           <span className="text-dark-400">{entry.name}:</span>
-          <span className="font-semibold text-white">₹{entry.value?.toFixed(0)}</span>
+          <span className="font-semibold text-white">₹{(parseFloat(entry.value) || 0).toFixed(0)}</span>
         </div>
       ))}
     </div>

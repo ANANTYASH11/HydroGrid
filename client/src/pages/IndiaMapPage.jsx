@@ -181,7 +181,7 @@ export default function IndiaMapPage() {
       .map(([name, s]) => {
         let val  = getVal(s, metric);
         if (metric !== 'combined') val *= multiplier;
-        val = Number(val.toFixed(metric === 'electricity' ? 1 : 0));
+        val = Number((parseFloat(val) || 0).toFixed(metric === 'electricity' ? 1 : 0));
         const tier = zoneTier(val, metric, multiplier);
         return { name, val, tier, accent: tierColor(tier), ...s };
       })
@@ -220,7 +220,12 @@ export default function IndiaMapPage() {
     const renewableSum = all.reduce((a, s) => a + (s.renewable || 0), 0);
     const renewable = all.length ? (renewableSum / all.length) : 0;
     
-    return { avg: avg.toFixed(1), crit, totalAlerts, renewable: renewable.toFixed(0) };
+    return { 
+      avg: (parseFloat(avg) || 0).toFixed(1), 
+      crit, 
+      totalAlerts, 
+      renewable: (parseFloat(renewable) || 0).toFixed(0) 
+    };
   }, [metric, multiplier, STATE_DATA]);
 
   const selectedData = selected ? STATE_DATA[selected] : null;
@@ -502,7 +507,7 @@ export default function IndiaMapPage() {
                   <div>
                     <p className="text-xs font-bold text-white leading-none">{selected}</p>
                     <p className="text-[10px] mt-0.5" style={{ color: tierColor(zoneTier((STATE_DATA[selected]?.water || 0) * (metric==='combined'?1:multiplier),metric, multiplier)) }}>
-                      {Number(((STATE_DATA[selected]?.water || 0) * (metric==='combined'?1:multiplier)).toFixed(metric==='electricity'?1:0))} {displayUnit} · {zoneTier((STATE_DATA[selected]?.water || 0) * (metric==='combined'?1:multiplier),metric, multiplier)}
+                      {(parseFloat((STATE_DATA[selected]?.water || 0) * (metric==='combined'?1:multiplier)) || 0).toFixed(metric==='electricity'?1:0)} {displayUnit} · {zoneTier((STATE_DATA[selected]?.water || 0) * (metric==='combined'?1:multiplier),metric, multiplier)}
                     </p>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 ml-1" style={{ color: "#52525b" }} />
@@ -712,7 +717,7 @@ export default function IndiaMapPage() {
                         <YAxis tick={{ fill: "var(--text-lo)", fontSize: 8 }} axisLine={false} tickLine={false} domain={["auto","auto"]} />
                         <RechartsTip
                           contentStyle={{ background: "var(--bg-elevated)", border: "1px solid var(--border-sub)", borderRadius: "8px", color: "var(--text-hi)", fontSize: "11px" }}
-                          formatter={v => [Number(v).toFixed(1), cfg.label]}
+                          formatter={v => [(parseFloat(v) || 0).toFixed(1), cfg.label]}
                           cursor={{ stroke: "var(--border-sub)" }}
                         />
                         <Line type="monotone" dataKey="val"

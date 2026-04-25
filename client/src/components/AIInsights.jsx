@@ -328,13 +328,13 @@ const AIInsights = ({ userId }) => {
       if (analyticsRes?.data?.analytics) {
         const a = analyticsRes.data.analytics;
         setAnalytics({
-          totalUsage: a.totalUsage || 2500,
-          avgDaily: a.avgDaily || 83,
+          totalUsage: parseFloat(a.totalUsage || 2500),
+          avgDaily: parseFloat(a.avgDaily || 83),
           peakHour: a.peakHourElectricity || '6 PM - 10 PM',
-          costPerUnit: a.costPerUnit || 8,
-          estimatedBill: a.estimatedBill || 24000,
+          costPerUnit: parseFloat(a.costPerUnit || 8),
+          estimatedBill: parseFloat(a.estimatedBill || 24000),
           trend: a.trend || 'IMPROVING',
-          trendPercent: a.trendPercent || -8.2,
+          trendPercent: parseFloat(a.trendPercent || -8.2),
           efficiency: a.efficiency || 'GOOD'
         });
         hasData = true;
@@ -471,7 +471,7 @@ const AIInsights = ({ userId }) => {
                       <p className="font-semibold text-white">{anomaly.date}</p>
                       <p className="text-sm text-dark-300 mt-1">{anomaly.reason}</p>
                       <p className="text-xs text-dark-400 mt-2">
-                        {t.actualLabel}: {anomaly.value.toFixed(1)} | {t.expectedLabel}: {anomaly.expected.toFixed(1)} | {t.deviationLabel}: {anomaly.deviation.toFixed(1)}%
+                        {t.actualLabel}: {(parseFloat(anomaly.value) || 0).toFixed(1)} | {t.expectedLabel}: {(parseFloat(anomaly.expected) || 0).toFixed(1)} | {t.deviationLabel}: {(parseFloat(anomaly.deviation) || 0).toFixed(1)}%
                       </p>
                     </div>
                     <span className={`text-xs font-bold px-3 py-1 rounded-full ${
@@ -822,11 +822,11 @@ const AIInsights = ({ userId }) => {
           {analytics ? (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
               {[
-                { label: t.totalUsage, value: analytics.totalUsage?.toFixed(0) || 'N/A', unit: t.units },
-                { label: t.dailyAverage, value: analytics.avgDaily?.toFixed(1) || 'N/A', unit: t.unitsPerDay },
+                { label: t.totalUsage, value: (parseFloat(analytics.totalUsage) || 0).toFixed(0), unit: t.units },
+                { label: t.dailyAverage, value: (parseFloat(analytics.avgDaily) || 0).toFixed(1), unit: t.unitsPerDay },
                 { label: t.peakHours, value: analytics.peakHour || 'N/A', unit: '' },
                 { label: t.costPerUnit, value: analytics.costPerUnit ? `₹${analytics.costPerUnit}` : 'N/A', unit: '' },
-                { label: t.estimatedBillAnalytics, value: analytics.estimatedBill ? `₹${analytics.estimatedBill.toFixed(0)}` : 'N/A', unit: '' },
+                { label: t.estimatedBillAnalytics, value: analytics.estimatedBill ? `₹${(parseFloat(analytics.estimatedBill) || 0).toFixed(0)}` : 'N/A', unit: '' },
                 { label: t.trend, value: (analytics.trendPercent || 0) + '%', unit: (analytics.trendPercent || 0) < 0 ? '� Improving' : '� Increasing' }
               ].map((stat, idx) => (
                 <motion.div

@@ -15,7 +15,7 @@ function CustomTooltip({ active, payload }) {
       <div className="flex items-center gap-2 text-sm">
         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill }} />
         <span className="text-dark-400">{payload[0].name}:</span>
-        <span className="font-semibold text-white">₹{payload[0].value?.toFixed(0)}</span>
+        <span className="font-semibold text-white">₹{(parseFloat(payload[0].value) || 0).toFixed(0)}</span>
       </div>
     </div>
   );
@@ -60,7 +60,7 @@ export default function UsagePieChart({ data = [], title = 'Cost Distribution', 
         {/* Center label */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center">
-            <p className="text-2xl font-bold text-white">₹{total.toFixed(0)}</p>
+            <p className="text-2xl font-bold text-white">₹{(parseFloat(total) || 0).toFixed(0)}</p>
             <p className="text-xs text-dark-400">Total Cost</p>
           </div>
         </div>
@@ -74,7 +74,7 @@ export default function UsagePieChart({ data = [], title = 'Cost Distribution', 
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index] }} />
               <span className="text-sm text-dark-300">{entry.name}</span>
             </div>
-            <span className="text-sm font-medium text-white">₹{entry.value?.toFixed(0)}</span>
+            <span className="text-sm font-medium text-white">₹{(parseFloat(entry.value) || 0).toFixed(0)}</span>
           </div>
         ))}
       </div>
