@@ -1,6 +1,6 @@
 /**
  * HydroGrid Server - Main Entry Point
- * Express.js server with MongoDB connection, REST API routes,
+ * Express.js server with PostgreSQL connection, REST API routes,
  * CORS configuration, and global error handling
  */
 
@@ -25,7 +25,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const LIVE_FEED_INTERVAL_MS = 10000;
 
-// Connect to MongoDB
+// Connect to Supabase PostgreSQL
 connectDB();
 
 // ==================== MIDDLEWARE ====================
