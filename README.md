@@ -6,7 +6,7 @@ A production-level, full-stack SaaS web application for tracking, analyzing, and
 
 ---
 
-## 🎯 Features
+## 🎯 Features 
 
 ### Core
 - **🔐 JWT Authentication** — Secure login/signup with role-based access (User/Admin)
