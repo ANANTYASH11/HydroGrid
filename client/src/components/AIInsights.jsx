@@ -269,9 +269,9 @@ const AIInsights = ({ userId }) => {
       if (anomaliesRes?.data?.anomalies?.length > 0) {
         setAnomalies(anomaliesRes.data.anomalies.map(a => ({
           date: a.date,
-          value: a.actualValue,
-          expected: a.expectedValue,
-          deviation: a.deviation,
+          value: parseFloat(a.actualValue || 0),
+          expected: parseFloat(a.expectedValue || 0),
+          deviation: parseFloat(a.deviation || 0),
           reason: a.reason,
           severity: a.severity === 'HIGH' ? 4.5 : 2.5
         })));

@@ -79,7 +79,13 @@ router.get('/detect-anomalies', async (req, res) => {
     }`;
 
     const parsedData = await groq.generateJSONResponse(prompt, schema);
-    const responseData = { success: true, anomalies: parsedData.anomalies || [] };
+    const anomalies = (parsedData.anomalies || []).map(a => ({
+      ...a,
+      actualValue: parseFloat(a.actualValue || 0),
+      expectedValue: parseFloat(a.expectedValue || 0),
+      deviation: parseFloat(a.deviation || 0)
+    }));
+    const responseData = { success: true, anomalies };
     setCachedResponse(req, 'anomalies', responseData);
     res.json(responseData);
   } catch (err) {
@@ -117,7 +123,17 @@ router.get('/predict-next-30-days', async (req, res) => {
     }`;
 
     const parsedData = await groq.generateJSONResponse(prompt, schema);
-    const responseData = { success: true, forecast: parsedData.forecast || [] };
+    const forecast = (parsedData.forecast || []).map(f => ({
+      ...f,
+      predictedWater: parseFloat(f.predictedWater || 0),
+      waterLower: parseFloat(f.waterLower || 0),
+      waterUpper: parseFloat(f.waterUpper || 0),
+      predictedElectricity: parseFloat(f.predictedElectricity || 0),
+      electricityLower: parseFloat(f.electricityLower || 0),
+      electricityUpper: parseFloat(f.electricityUpper || 0),
+      confidence: parseFloat(f.confidence || 0)
+    }));
+    const responseData = { success: true, forecast };
     setCachedResponse(req, 'forecast', responseData);
     res.json(responseData);
   } catch (err) {
@@ -221,7 +237,16 @@ router.get('/analytics', async (req, res) => {
     }`;
 
     const parsedData = await groq.generateJSONResponse(prompt, schema);
-    const responseData = { success: true, analytics: parsedData.analytics || {} };
+    const a = parsedData.analytics || {};
+    const analytics = {
+      ...a,
+      totalUsage: parseFloat(a.totalUsage || 0),
+      avgDaily: parseFloat(a.avgDaily || 0),
+      costPerUnit: parseFloat(a.costPerUnit || 0),
+      estimatedBill: parseFloat(a.estimatedBill || 0),
+      trendPercent: parseFloat(a.trendPercent || 0)
+    };
+    const responseData = { success: true, analytics };
     setCachedResponse(req, 'analytics', responseData);
     res.json(responseData);
   } catch (err) {
