@@ -101,7 +101,7 @@ export default function StatCard({ title, value, suffix = '', prefix = '', trend
             ? <TrendingUp  className="w-3.5 h-3.5 text-emerald-400" />
             : <TrendDown   className="w-3.5 h-3.5 text-red-400" />}
           <span className={`text-sm font-semibold ${trendUp ? 'text-emerald-400' : 'text-red-400'}`}>
-            {trend >= 0 ? '+' : ''}{Math.abs(trend).toFixed(1)}%
+            {trend >= 0 ? '+' : ''}{(parseFloat(Math.abs(trend)) || 0).toFixed(1)}%
           </span>
           <span className="text-xs text-dark-500">vs last month</span>
         </div>

@@ -22,7 +22,7 @@ function CustomTooltip({ active, payload, label }) {
           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
           <span className="text-dark-400">{entry.name}:</span>
           <span className="font-semibold text-white">
-            {entry.value?.toFixed(1)} {entry.name === 'Water' ? 'L' : 'kWh'}
+            {(parseFloat(entry.value) || 0).toFixed(1)} {entry.name === 'Water' ? 'L' : 'kWh'}
           </span>
         </div>
       ))}

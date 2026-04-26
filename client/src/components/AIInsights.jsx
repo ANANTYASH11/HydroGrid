@@ -362,11 +362,11 @@ const AIInsights = ({ userId }) => {
     return (
       <div className="bg-white border border-slate-200 rounded-2xl p-3 text-sm text-slate-700 shadow-lg">
         <p className="font-semibold text-slate-900">{label}</p>
-        <p className="mt-2">Water forecast: {data.predictedWater.toFixed(0)} L</p>
-        <p>Electricity forecast: {data.predictedElectricity.toFixed(1)} kWh</p>
-        <p className="mt-2 text-slate-500">Water range: {data.lowerWater.toFixed(0)} - {data.upperWater.toFixed(0)} L</p>
-        <p>Electricity range: {data.lowerElectricity.toFixed(1)} - {data.upperElectricity.toFixed(1)} kWh</p>
-        <p className="mt-2 text-slate-500">Confidence: {(data.confidence * 100).toFixed(1)}%</p>
+        <p className="mt-2">Water forecast: {(parseFloat(data.predictedWater) || 0).toFixed(0)} L</p>
+        <p>Electricity forecast: {(parseFloat(data.predictedElectricity) || 0).toFixed(1)} kWh</p>
+        <p className="mt-2 text-slate-500">Water range: {(parseFloat(data.lowerWater) || 0).toFixed(0)} - {(parseFloat(data.upperWater) || 0).toFixed(0)} L</p>
+        <p>Electricity range: {(parseFloat(data.lowerElectricity) || 0).toFixed(1)} - {(parseFloat(data.upperElectricity) || 0).toFixed(1)} kWh</p>
+        <p className="mt-2 text-slate-500">Confidence: {(parseFloat(data.confidence * 100) || 0).toFixed(1)}%</p>
       </div>
     );
   };
@@ -383,10 +383,10 @@ const AIInsights = ({ userId }) => {
     const electricityTrend = Math.abs(electricityDelta) < 2 ? 'stable' : electricityDelta > 0 ? 'rising' : 'falling';
     const waterMessage = waterTrend === 'stable'
       ? 'Water use remains steady.'
-      : `Water use is ${waterTrend} by ${Math.abs(waterDelta).toFixed(0)} L over the next 30 days.`;
+      : `Water use is ${waterTrend} by ${(parseFloat(Math.abs(waterDelta)) || 0).toFixed(0)} L over the next 30 days.`;
     const electricityMessage = electricityTrend === 'stable'
       ? 'Electricity demand stays steady.'
-      : `Electricity demand is ${electricityTrend} by ${Math.abs(electricityDelta).toFixed(1)} kWh over the next 30 days.`;
+      : `Electricity demand is ${electricityTrend} by ${(parseFloat(Math.abs(electricityDelta)) || 0).toFixed(1)} kWh over the next 30 days.`;
 
     return `${waterMessage} ${electricityMessage}`;
   };
@@ -477,7 +477,7 @@ const AIInsights = ({ userId }) => {
                     <span className={`text-xs font-bold px-3 py-1 rounded-full ${
                       anomaly.severity > 3 ? 'bg-red-600 text-white' : 'bg-yellow-600 text-white'
                     }`}>
-                      {anomaly.severity.toFixed(1)}/5
+                      {(parseFloat(anomaly.severity) || 0).toFixed(1)}/5
                     </span>
                   </div>
                 </motion.div>
@@ -729,7 +729,7 @@ const AIInsights = ({ userId }) => {
                   className="glass-card p-4"
                 >
                   <p className="text-sm text-dark-400">{t.carbonEmissions}</p>
-                  <p className="text-2xl font-bold text-green-400 mt-1">{carbon.totalEmissions?.toFixed(1)} <span className="text-sm">{t.tonnes}</span></p>
+                  <p className="text-2xl font-bold text-green-400 mt-1">{(parseFloat(carbon.totalEmissions) || 0).toFixed(1)} <span className="text-sm">{t.tonnes}</span></p>
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -751,7 +751,7 @@ const AIInsights = ({ userId }) => {
                   className="glass-card p-4"
                 >
                   <p className="text-sm text-dark-400">{t.dailyAverage}</p>
-                  <p className="text-2xl font-bold text-primary-400 mt-1">{carbon.dailyAverage?.toFixed(1)} <span className="text-sm">kg</span></p>
+                  <p className="text-2xl font-bold text-primary-400 mt-1">{(parseFloat(carbon.dailyAverage) || 0).toFixed(1)} <span className="text-sm">kg</span></p>
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -774,7 +774,7 @@ const AIInsights = ({ userId }) => {
                   <Trees className="w-12 h-12 flex-shrink-0" />
                   <div>
                     <h3 className="text-xl font-bold mb-2">🌳 {t.carbonTreeImpact}</h3>
-                    <p className="mb-3">{t.carbonOffsetMsg.split('.')[0]} <span className="font-bold">{carbon.totalEmissions?.toFixed(1)} {t.tonnes}</span> {t.carbonOffsetMsg.split('.').slice(1).join('.')} <span className="font-bold text-lg">{carbon.treesNeeded} trees</span>.</p>
+                    <p className="mb-3">{t.carbonOffsetMsg.split('.')[0]} <span className="font-bold">{(parseFloat(carbon.totalEmissions) || 0).toFixed(1)} {t.tonnes}</span> {t.carbonOffsetMsg.split('.').slice(1).join('.')} <span className="font-bold text-lg">{carbon.treesNeeded} trees</span>.</p>
                     <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
                       <div className="bg-white bg-opacity-20 p-2 rounded">
                         <p>🌳 {t.treesPerTonne}</p>

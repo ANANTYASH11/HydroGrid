@@ -77,7 +77,7 @@ export default function ReportsPage() {
       if (report?.dailyData) {
         const headers = 'Date,Water (L),Electricity (kWh),Water Cost (₹),Electricity Cost (₹),Total Cost (₹)\n';
         const rows = report.dailyData.map(d =>
-          `${d.date},${d.water?.toFixed(1)},${d.electricity?.toFixed(2)},${d.waterCost?.toFixed(2)},${d.electricityCost?.toFixed(2)},${d.totalCost?.toFixed(2)}`
+          `${d.date},${(parseFloat(d.water) || 0).toFixed(1)},${(parseFloat(d.electricity) || 0).toFixed(2)},${(parseFloat(d.waterCost) || 0).toFixed(2)},${(parseFloat(d.electricityCost) || 0).toFixed(2)},${(parseFloat(d.totalCost) || 0).toFixed(2)}`
         ).join('\n');
         const blob = new Blob([headers + rows], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
@@ -174,10 +174,10 @@ export default function ReportsPage() {
           {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: t.waterUsedLabel, value: `${report.summary.water.totalValue.toFixed(0)} L`, sub: `${t.avgPrefix}: ${report.summary.water.avgDaily.toFixed(0)} L/day` },
-              { label: t.electricityUsedLabel, value: `${report.summary.electricity.totalValue.toFixed(0)} kWh`, sub: `${t.avgPrefix}: ${report.summary.electricity.avgDaily.toFixed(1)} kWh/day` },
-              { label: t.waterCostLabel, value: `₹${report.summary.water.totalCost.toFixed(2)}`, sub: `₹${(report.summary.water.totalCost / report.period.days).toFixed(2)}/day` },
-              { label: t.totalCostLabel, value: `₹${report.totalCost.toFixed(2)}`, sub: `${t.overDays} ${report.period.days} ${t.days}` },
+              { label: t.waterUsedLabel, value: `${(parseFloat(report.summary.water.totalValue) || 0).toFixed(0)} L`, sub: `${t.avgPrefix}: ${(parseFloat(report.summary.water.avgDaily) || 0).toFixed(0)} L/day` },
+              { label: t.electricityUsedLabel, value: `${(parseFloat(report.summary.electricity.totalValue) || 0).toFixed(0)} kWh`, sub: `${t.avgPrefix}: ${(parseFloat(report.summary.electricity.avgDaily) || 0).toFixed(1)} kWh/day` },
+              { label: t.waterCostLabel, value: `₹${(parseFloat(report.summary.water.totalCost) || 0).toFixed(2)}`, sub: `₹${(parseFloat(report.summary.water.totalCost / (report.period.days || 1)) || 0).toFixed(2)}/day` },
+              { label: t.totalCostLabel, value: `₹${(parseFloat(report.totalCost) || 0).toFixed(2)}`, sub: `${t.overDays} ${report.period.days} ${t.days}` },
             ].map((card, i) => (
               <motion.div
                 key={i}
@@ -237,11 +237,11 @@ export default function ReportsPage() {
                 {report.dailyData.slice(-10).map((row, i) => (
                   <tr key={i} className="border-b border-dark-800/50 hover:bg-dark-700/30 transition-colors">
                     <td className="py-3 text-white">{new Date(row.date).toLocaleDateString('en-IN')}</td>
-                    <td className="py-3 text-right text-white" style={{ color: "#00E87A" }}>{row.water?.toFixed(1)}</td>
-                    <td className="py-3 text-right text-secondary-400">{row.electricity?.toFixed(2)}</td>
-                    <td className="py-3 text-right text-dark-300">₹{row.waterCost?.toFixed(2)}</td>
-                    <td className="py-3 text-right text-dark-300">₹{row.electricityCost?.toFixed(2)}</td>
-                    <td className="py-3 text-right text-white font-medium">₹{row.totalCost?.toFixed(2)}</td>
+                    <td className="py-3 text-right text-white" style={{ color: "#00E87A" }}>{(parseFloat(row.water) || 0).toFixed(1)}</td>
+                    <td className="py-3 text-right text-secondary-400">{(parseFloat(row.electricity) || 0).toFixed(2)}</td>
+                    <td className="py-3 text-right text-dark-300">₹{(parseFloat(row.waterCost) || 0).toFixed(2)}</td>
+                    <td className="py-3 text-right text-dark-300">₹{(parseFloat(row.electricityCost) || 0).toFixed(2)}</td>
+                    <td className="py-3 text-right text-white font-medium">₹{(parseFloat(row.totalCost) || 0).toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>

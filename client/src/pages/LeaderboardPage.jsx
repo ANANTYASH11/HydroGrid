@@ -107,8 +107,8 @@ export default function LeaderboardPage() {
                   {user.name?.charAt(0)?.toUpperCase()}
                 </div>
                 <h3 className="font-semibold text-white text-lg">{user.name}</h3>
-                <p className="text-sm text-dark-400 mt-1">{t.scoreLabel}: {user.efficiencyScore?.toFixed(4)}</p>
-                <p className="text-xs text-secondary-400 mt-0.5">₹{user.totalCost?.toFixed(0)} total</p>
+                <p className="text-sm text-dark-400 mt-1">{t.scoreLabel}: {(parseFloat(user.efficiencyScore) || 0).toFixed(4)}</p>
+                <p className="text-xs text-secondary-400 mt-0.5">₹{(parseFloat(user.totalCost) || 0).toFixed(0)} total</p>
                 {user.badges?.length > 0 && (
                   <div className="flex justify-center gap-1 mt-2">
                     {user.badges.map((b, i) => (
@@ -161,20 +161,20 @@ export default function LeaderboardPage() {
                 <div className="text-right">
                   <div className="flex items-center gap-1 text-primary-400 text-sm">
                     <Droplets className="w-3 h-3" />
-                    {user.totalWaterValue?.toFixed(0)} L
+                    {(parseFloat(user.totalWaterValue) || 0).toFixed(0)} L
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="flex items-center gap-1 text-secondary-400 text-sm">
                     <Zap className="w-3 h-3" />
-                    {user.totalElectricityValue?.toFixed(0)} kWh
+                    {(parseFloat(user.totalElectricityValue) || 0).toFixed(0)} kWh
                   </div>
                 </div>
               </div>
 
               {/* Efficiency Score */}
               <div className="text-right">
-                <p className="text-sm font-semibold text-white">{user.efficiencyScore?.toFixed(4)}</p>
+                <p className="text-sm font-semibold text-white">{(parseFloat(user.efficiencyScore) || 0).toFixed(4)}</p>
                 <p className="text-xs text-dark-400">{t.rupeePerReading}</p>
               </div>
             </motion.div>

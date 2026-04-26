@@ -117,12 +117,12 @@ export default function InsightsPage() {
   const chartData = [
     ...usageData.slice(-14).map(d => ({
       date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      actual: parseFloat(d.value.toFixed(1)),
+      actual: parseFloat((parseFloat(d.value) || 0).toFixed(1)),
       fullDate: d.date,
     })),
     ...predictions.map(d => ({
       date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      predicted: parseFloat(d.value.toFixed(1)),
+      predicted: parseFloat((parseFloat(d.value) || 0).toFixed(1)),
       fullDate: d.date,
     })),
   ];

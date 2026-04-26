@@ -83,7 +83,7 @@ export function predictFuture(historicalData, daysAhead = 7) {
 
     predictions.push({
       date: futureDate.toISOString().split('T')[0],
-      value: parseFloat(model.predict(x).toFixed(2)),
+      value: parseFloat((parseFloat(model.predict(x)) || 0).toFixed(2)),
       isPrediction: true,
     });
   }
@@ -120,9 +120,9 @@ export function detectAnomalies(values, threshold = 2) {
       anomalies.push({
         index,
         value,
-        zScore: parseFloat(zScore.toFixed(2)),
+        zScore: parseFloat((parseFloat(zScore) || 0).toFixed(2)),
         deviation: value > mean ? 'high' : 'low',
-        percentAboveMean: parseFloat(((value - mean) / mean * 100).toFixed(1)),
+        percentAboveMean: parseFloat((parseFloat((value - mean) / mean * 100) || 0).toFixed(1)),
       });
     }
   });
@@ -154,8 +154,8 @@ export function generateSmartSuggestions(usageData) {
         icon: '�',
         priority: 'high',
         title: 'High Water Consumption Detected',
-        description: `Your average daily water usage is ${avgWater.toFixed(0)}L, which is above the recommended 300L per household. Consider installing low-flow fixtures.`,
-        savingsPotential: '₹' + (avgWater * 0.05 * 30).toFixed(0) + '/month',
+        description: `Your average daily water usage is ${(parseFloat(avgWater) || 0).toFixed(0)}L, which is above the recommended 300L per household. Consider installing low-flow fixtures.`,
+        savingsPotential: '₹' + (parseFloat(avgWater * 0.05 * 30) || 0).toFixed(0) + '/month',
       });
     }
 
@@ -172,7 +172,7 @@ export function generateSmartSuggestions(usageData) {
           icon: '�',
           priority: 'critical',
           title: 'Possible Water Leak Detected',
-          description: `Unusual water usage detected during nighttime hours (${avgNight.toFixed(0)}L avg). This could indicate a leak. Check pipes and fixtures.`,
+          description: `Unusual water usage detected during nighttime hours (${(parseFloat(avgNight) || 0).toFixed(0)}L avg). This could indicate a leak. Check pipes and fixtures.`,
           savingsPotential: 'Up to ₹4,000/month',
         });
       }
@@ -220,7 +220,7 @@ export function generateSmartSuggestions(usageData) {
       icon: '�',
       priority: 'info',
       title: 'Great Progress!',
-      description: `You've saved ₹${savings.total.toFixed(0)} compared to last month! Keep up the efficient usage patterns.`,
+      description: `You've saved ₹${(parseFloat(savings.total) || 0).toFixed(0)} compared to last month! Keep up the efficient usage patterns.`,
       savingsPotential: 'Already saving!',
     });
   }
@@ -246,11 +246,11 @@ export function calculateCarbonFootprint(kwhUsed = 0, litersUsed = 0) {
   const totalCO2 = electricityCO2 + waterCO2;
 
   return {
-    electricity: parseFloat(electricityCO2.toFixed(2)),
-    water: parseFloat(waterCO2.toFixed(2)),
-    total: parseFloat(totalCO2.toFixed(2)),
+    electricity: parseFloat((parseFloat(electricityCO2) || 0).toFixed(2)),
+    water: parseFloat((parseFloat(waterCO2) || 0).toFixed(2)),
+    total: parseFloat((parseFloat(totalCO2) || 0).toFixed(2)),
     treesNeeded: Math.ceil(totalCO2 / 22), // 1 tree absorbs ~22 kg CO₂/year
-    carMilesEquivalent: parseFloat((totalCO2 / 0.404).toFixed(1)), // EPA factor
+    carMilesEquivalent: parseFloat((parseFloat(totalCO2 / 0.404) || 0).toFixed(1)), // EPA factor
     rating: totalCO2 < 50 ? 'Excellent' : totalCO2 < 100 ? 'Good' : totalCO2 < 200 ? 'Average' : 'High',
     color: totalCO2 < 50 ? '#10b981' : totalCO2 < 100 ? '#3b82f6' : totalCO2 < 200 ? '#f59e0b' : '#ef4444',
   };

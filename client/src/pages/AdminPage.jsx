@@ -155,7 +155,7 @@ const AdminPage = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-slate-400 text-sm font-medium">Total Records</p>
-                        <p className="text-3xl font-bold text-white mt-2">{(stats.totalRecords / 1000).toFixed(1)}K</p>
+                        <p className="text-3xl font-bold text-white mt-2">{(parseFloat(stats.totalRecords / 1000) || 0).toFixed(1)}K</p>
                         <p className="text-slate-400 text-xs mt-2">{stats.recordsThisWeek} this week</p>
                       </div>
                       <BarChart3 className="w-12 h-12 text-purple-500/20" />
