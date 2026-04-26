@@ -13,7 +13,7 @@ const getTrainingData = async (req, res, next) => {
 
     let sql = `
       SELECT 
-        state, type, date_trunc('day', timestamp) as date,
+        state, type, (date_trunc('day', timestamp AT TIME ZONE 'Asia/Kolkata'))::date::text as "dateStr",
         SUM(value) as "totalValue", AVG(value) as "avgValue", 
         MIN(value) as "minValue", MAX(value) as "maxValue", 
         SUM(cost) as "totalCost", COUNT(*) as count
@@ -26,7 +26,7 @@ const getTrainingData = async (req, res, next) => {
     if (state) { sql += ` AND state = $${pCount++}`; params.push(state); }
     if (type) { sql += ` AND type = $${pCount++}`; params.push(type); }
 
-    sql += ' GROUP BY state, type, date ORDER BY date DESC';
+    sql += ' GROUP BY state, type, "dateStr" ORDER BY "dateStr" DESC';
 
     const result = await query(sql, params);
 

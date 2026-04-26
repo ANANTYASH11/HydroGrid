@@ -204,7 +204,11 @@ export default function ReportsPage() {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: 'var(--text-mid)', fontSize: 11 }}
-                  tickFormatter={(d) => new Date(d).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+                  tickFormatter={(d) => {
+                    if (!d) return '';
+                    const [y, m, day] = d.split('-');
+                    return new Date(y, m - 1, day).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+                  }}
                 />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-mid)', fontSize: 11 }} tickFormatter={(v) => `₹${v}`} />
                 <Tooltip

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Login Page - Authentication screen for existing users
  * Features: split-screen layout, animated illustration, form validation, Google OAuth
  */
@@ -69,13 +69,14 @@ export default function LoginPage() {
       const result = await login({ email, password });
       console.log('✅ Login result:', result);
       
-      if (result) {
-        if (state) localStorage.setItem('hydrogrid_last_state', state);
-        console.log('✅ Login successful, redirecting to dashboard');
-        // Navigate immediately after successful login
-        // The state update in AuthContext will happen, but we don't wait for it
         setTimeout(() => {
-          navigate('/dashboard');
+          if (result.role === 'admin') {
+            console.log('🛡️ Admin logged in, redirecting to admin panel');
+            navigate('/admin');
+          } else {
+            console.log('✅ User logged in, redirecting to dashboard');
+            navigate('/dashboard');
+          }
         }, 100);
       } else {
         throw new Error('No user returned from login');

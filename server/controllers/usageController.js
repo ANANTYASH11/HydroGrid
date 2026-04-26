@@ -11,7 +11,7 @@ const INDIA_TARIFFS = {
     electricity: [
       { upto: 100, rate: 4.0 },
       { upto: 300, rate: 6.5 },
-      { upto: Infinity, rate: 8.0 },
+      { upto: Infinity, rate: 8.5 },
     ],
     water: [
       { upto: 10000, rate: 0.03 },
@@ -21,40 +21,307 @@ const INDIA_TARIFFS = {
   },
   maharashtra: {
     electricity: [
-      { upto: 100, rate: 4.2 },
-      { upto: 300, rate: 7.2 },
-      { upto: Infinity, rate: 9.1 },
+      { upto: 100, rate: 4.41 },
+      { upto: 300, rate: 8.82 },
+      { upto: 500, rate: 11.72 },
+      { upto: Infinity, rate: 12.92 },
     ],
     water: [
-      { upto: 10000, rate: 0.03 },
-      { upto: 25000, rate: 0.06 },
-      { upto: Infinity, rate: 0.09 },
+      { upto: 10000, rate: 0.05 },
+      { upto: 25000, rate: 0.08 },
+      { upto: Infinity, rate: 0.12 },
     ],
   },
   delhi: {
     electricity: [
       { upto: 200, rate: 3.0 },
-      { upto: 400, rate: 6.8 },
-      { upto: Infinity, rate: 8.5 },
+      { upto: 400, rate: 4.5 },
+      { upto: 800, rate: 6.5 },
+      { upto: 1200, rate: 7.0 },
+      { upto: Infinity, rate: 8.0 },
     ],
     water: [
-      { upto: 10000, rate: 0.02 },
-      { upto: 25000, rate: 0.05 },
-      { upto: Infinity, rate: 0.08 },
+      { upto: 20000, rate: 0.0 }, // Free upto 20KL in Delhi for domestic
+      { upto: 30000, rate: 0.03 },
+      { upto: Infinity, rate: 0.05 },
     ],
   },
   karnataka: {
     electricity: [
-      { upto: 100, rate: 4.5 },
-      { upto: 300, rate: 7.0 },
-      { upto: Infinity, rate: 8.8 },
+      { upto: 50, rate: 4.15 },
+      { upto: 100, rate: 5.6 },
+      { upto: 200, rate: 7.15 },
+      { upto: Infinity, rate: 8.2 },
+    ],
+    water: [
+      { upto: 8000, rate: 0.07 },
+      { upto: 15000, rate: 0.11 },
+      { upto: 25000, rate: 0.18 },
+      { upto: Infinity, rate: 0.25 },
+    ],
+  },
+  uttar_pradesh: {
+    electricity: [
+      { upto: 150, rate: 5.5 },
+      { upto: 300, rate: 6.0 },
+      { upto: 500, rate: 6.5 },
+      { upto: Infinity, rate: 7.0 },
     ],
     water: [
       { upto: 10000, rate: 0.03 },
-      { upto: 25000, rate: 0.05 },
+      { upto: Infinity, rate: 0.05 },
+    ],
+  },
+  gujarat: {
+    electricity: [
+      { upto: 50, rate: 3.05 },
+      { upto: 100, rate: 3.5 },
+      { upto: 250, rate: 4.15 },
+      { upto: Infinity, rate: 5.2 },
+    ],
+    water: [
+      { upto: 15000, rate: 0.04 },
+      { upto: Infinity, rate: 0.06 },
+    ],
+  },
+  tamil_nadu: {
+    electricity: [
+      { upto: 100, rate: 0.0 }, // Free 100 units
+      { upto: 200, rate: 2.25 },
+      { upto: 500, rate: 4.5 },
+      { upto: Infinity, rate: 6.6 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.04 },
+      { upto: Infinity, rate: 0.08 },
+    ],
+  },
+  west_bengal: {
+    electricity: [
+      { upto: 102, rate: 5.3 },
+      { upto: 180, rate: 5.97 },
+      { upto: 300, rate: 6.97 },
+      { upto: Infinity, rate: 7.31 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.02 },
+      { upto: Infinity, rate: 0.04 },
+    ],
+  },
+  telangana: {
+    electricity: [
+      { upto: 100, rate: 3.3 },
+      { upto: 200, rate: 4.3 },
+      { upto: 300, rate: 7.2 },
+      { upto: 400, rate: 8.5 },
+      { upto: Infinity, rate: 10.0 },
+    ],
+    water: [
+      { upto: 15000, rate: 0.05 },
+      { upto: Infinity, rate: 0.1 },
+    ],
+  },
+  rajasthan: {
+    electricity: [
+      { upto: 50, rate: 4.75 },
+      { upto: 150, rate: 6.5 },
+      { upto: 300, rate: 7.35 },
+      { upto: Infinity, rate: 7.95 },
+    ],
+    water: [
+      { upto: 15000, rate: 0.03 },
+      { upto: Infinity, rate: 0.06 },
+    ],
+  },
+  andhra_pradesh: {
+    electricity: [
+      { upto: 30, rate: 1.9 },
+      { upto: 75, rate: 3.0 },
+      { upto: 125, rate: 4.5 },
+      { upto: 225, rate: 6.0 },
+      { upto: Infinity, rate: 9.5 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.04 },
+      { upto: Infinity, rate: 0.08 },
+    ],
+  },
+  kerala: {
+    electricity: [
+      { upto: 50, rate: 3.15 },
+      { upto: 100, rate: 3.95 },
+      { upto: 150, rate: 5.0 },
+      { upto: 250, rate: 6.4 },
+      { upto: Infinity, rate: 8.5 },
+    ],
+    water: [
+      { upto: 5000, rate: 0.04 },
+      { upto: 10000, rate: 0.05 },
+      { upto: 20000, rate: 0.06 },
+      { upto: Infinity, rate: 0.15 },
+    ],
+  },
+  punjab: {
+    electricity: [
+      { upto: 100, rate: 4.19 },
+      { upto: 300, rate: 6.64 },
+      { upto: Infinity, rate: 7.73 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.03 },
+      { upto: Infinity, rate: 0.05 },
+    ],
+  },
+  haryana: {
+    electricity: [
+      { upto: 50, rate: 2.0 },
+      { upto: 150, rate: 2.5 },
+      { upto: 250, rate: 5.25 },
+      { upto: 500, rate: 6.3 },
+      { upto: Infinity, rate: 7.1 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.04 },
       { upto: Infinity, rate: 0.07 },
     ],
   },
+  bihar: {
+    electricity: [
+      { upto: 100, rate: 6.1 },
+      { upto: 200, rate: 6.95 },
+      { upto: Infinity, rate: 8.05 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.03 },
+      { upto: Infinity, rate: 0.06 },
+    ],
+  },
+  madhya_pradesh: {
+    electricity: [
+      { upto: 50, rate: 4.21 },
+      { upto: 150, rate: 5.17 },
+      { upto: 300, rate: 6.74 },
+      { upto: Infinity, rate: 7.12 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.04 },
+      { upto: Infinity, rate: 0.08 },
+    ],
+  },
+  odisha: {
+    electricity: [
+      { upto: 50, rate: 3.0 },
+      { upto: 200, rate: 4.8 },
+      { upto: 400, rate: 5.8 },
+      { upto: Infinity, rate: 6.2 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.03 },
+      { upto: Infinity, rate: 0.05 },
+    ],
+  },
+  assam: {
+    electricity: [
+      { upto: 120, rate: 5.4 },
+      { upto: 240, rate: 6.6 },
+      { upto: Infinity, rate: 7.6 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.03 },
+      { upto: Infinity, rate: 0.05 },
+    ],
+  },
+  chhattisgarh: {
+    electricity: [
+      { upto: 100, rate: 3.7 },
+      { upto: 200, rate: 3.9 },
+      { upto: 400, rate: 5.3 },
+      { upto: Infinity, rate: 6.5 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.03 },
+      { upto: Infinity, rate: 0.05 },
+    ],
+  },
+  goa: {
+    electricity: [
+      { upto: 100, rate: 1.5 },
+      { upto: 200, rate: 2.25 },
+      { upto: 300, rate: 2.85 },
+      { upto: 400, rate: 3.3 },
+      { upto: Infinity, rate: 4.1 },
+    ],
+    water: [
+      { upto: 15000, rate: 0.02 },
+      { upto: Infinity, rate: 0.05 },
+    ],
+  },
+  himachal_pradesh: {
+    electricity: [
+      { upto: 125, rate: 1.55 },
+      { upto: 250, rate: 3.15 },
+      { upto: Infinity, rate: 4.4 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.02 },
+      { upto: Infinity, rate: 0.04 },
+    ],
+  },
+  jharkhand: {
+    electricity: [
+      { upto: 200, rate: 6.25 },
+      { upto: Infinity, rate: 6.5 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.03 },
+      { upto: Infinity, rate: 0.05 },
+    ],
+  },
+  uttarakhand: {
+    electricity: [
+      { upto: 100, rate: 3.1 },
+      { upto: 200, rate: 4.2 },
+      { upto: 400, rate: 5.8 },
+      { upto: Infinity, rate: 6.55 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.02 },
+      { upto: Infinity, rate: 0.04 },
+    ],
+  },
+  chandigarh: {
+    electricity: [
+      { upto: 150, rate: 2.75 },
+      { upto: 400, rate: 4.25 },
+      { upto: Infinity, rate: 4.65 },
+    ],
+    water: [
+      { upto: 15000, rate: 0.03 },
+      { upto: Infinity, rate: 0.06 },
+    ],
+  },
+  jammu_and_kashmir: {
+    electricity: [
+      { upto: 100, rate: 2.5 },
+      { upto: 200, rate: 3.5 },
+      { upto: Infinity, rate: 4.5 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.03 },
+      { upto: Infinity, rate: 0.05 },
+    ],
+  },
+  puducherry: {
+    electricity: [
+      { upto: 100, rate: 1.9 },
+      { upto: 200, rate: 3.0 },
+      { upto: Infinity, rate: 5.0 },
+    ],
+    water: [
+      { upto: 10000, rate: 0.04 },
+      { upto: Infinity, rate: 0.08 },
+    ],
+  }
 };
 
 const addUsage = async (req, res, next) => {
@@ -146,9 +413,9 @@ const getDashboardStats = async (req, res, next) => {
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(today.getDate() - 7);
     const dailyRes = await query(
-       `SELECT date_trunc('day', timestamp) as date, type, SUM(value) as "totalValue", SUM(cost) as "totalCost"
+       `SELECT (date_trunc('day', timestamp AT TIME ZONE 'Asia/Kolkata'))::date::text as "dateStr", type, SUM(value) as "totalValue", SUM(cost) as "totalCost"
         FROM usage_data WHERE user_id = $1 AND timestamp >= $2
-        GROUP BY date, type ORDER BY date ASC`,
+        GROUP BY "dateStr", type ORDER BY "dateStr" ASC`,
        [userId, sevenDaysAgo]
     );
 
@@ -186,7 +453,7 @@ const getDashboardStats = async (req, res, next) => {
     
     // Map daily data to expected _id format
     const dailyUsage = dailyRes.rows.map(r => ({
-        _id: { date: r.date.toISOString().split('T')[0], type: r.type },
+        _id: { date: r.dateStr, type: r.type },
         totalValue: parseFloat(r.totalValue),
         totalCost: parseFloat(r.totalCost)
     }));
@@ -221,44 +488,57 @@ const getDashboardStats = async (req, res, next) => {
 
 const simulateIoT = async (req, res, next) => {
   try {
-    const { days = 1 } = req.body;
+    const { days = 30 } = req.body; // Default to 30 days for a realistic report
     const now = new Date();
     let totalInserted = 0;
 
-    for (let d = 0; d < Math.min(days, 30); d++) {
+    for (let d = 0; d < Math.min(days, 60); d++) {
       const date = new Date(now);
       date.setDate(date.getDate() - d);
 
-      // Water readings
-      const waterCount = Math.floor(Math.random() * 5) + 4;
+      // Reset hours to midnight for consistent daily generation
+      date.setHours(0, 0, 0, 0);
+
+      // Water readings (4-9 readings per day)
+      const waterCount = Math.floor(Math.random() * 6) + 4;
       for (let i = 0; i < waterCount; i++) {
         const hour = Math.floor(Math.random() * 24);
         const ts = new Date(date);
         ts.setHours(hour, Math.floor(Math.random() * 60));
-        let val = 20 + Math.random() * 40;
-        if (hour >= 6 && hour <= 9) val *= 1.5;
+        
+        let val = 15 + Math.random() * 50; // 15-65 Liters per bucket/use
+        if (hour >= 6 && hour <= 9) val *= 1.8; // Morning peak
+        if (hour >= 19 && hour <= 21) val *= 1.4; // Evening peak
+
+        const costRate = 0.08; // ₹0.08 per liter (~₹80 per KL) - more realistic for tiered water
+        
         await query(
            'INSERT INTO usage_data (user_id, state, type, value, unit, cost, source, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-           [req.user.id, req.user.state, 'water', val, 'liters', val * 0.05, 'iot', ts]
+           [req.user.id, req.user.state || 'Delhi', 'water', val, 'liters', val * costRate, 'iot', ts]
         );
         totalInserted++;
       }
 
-      // Electricity readings
+      // Electricity readings (one per hour)
       for (let h = 0; h < 24; h++) {
         const ts = new Date(date);
         ts.setHours(h, 0);
-        let val = 0.5 + Math.random() * 1;
-        if (h >= 18 && h <= 23) val = 2.5 + Math.random() * 3;
+        
+        let val = 0.3 + Math.random() * 0.7; // 0.3-1.0 kWh base load
+        if (h >= 18 && h <= 23) val = 1.8 + Math.random() * 2.5; // AC/Lights peak
+        if (h >= 7 && h <= 10) val = 1.2 + Math.random() * 1.5; // Morning prep peak
+        
+        const costRate = 7.5; // ₹7.5 per kWh (average Indian tier)
+        
         await query(
            'INSERT INTO usage_data (user_id, state, type, value, unit, cost, source, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-           [req.user.id, req.user.state, 'electricity', val, 'kWh', val * 8, 'iot', ts]
+           [req.user.id, req.user.state || 'Delhi', 'electricity', val, 'kWh', val * costRate, 'iot', ts]
         );
         totalInserted++;
       }
     }
 
-    res.status(201).json({ success: true, count: totalInserted });
+    res.status(201).json({ success: true, count: totalInserted, message: `Successfully simulated ${totalInserted} readings over ${days} days.` });
   } catch (error) {
     next(error);
   }
@@ -434,19 +714,29 @@ const getTariffEstimate = async (req, res, next) => {
         return total;
     };
 
-    const electricity = calculate(electricityUnits, tariffs.electricity);
-    const water = calculate(waterLiters, tariffs.water);
+    const electricityCost = calculate(electricityUnits, tariffs.electricity);
+    const waterCost = calculate(waterLiters, tariffs.water);
 
     res.json({
       success: true,
       data: {
         state: stateKey,
-        totalEstimatedBill: parseFloat((electricity + water).toFixed(2)),
-        currency: 'INR'
+        electricity: {
+          total: parseFloat(electricityCost.toFixed(2)),
+          units: electricityUnits
+        },
+        water: {
+          total: parseFloat(waterCost.toFixed(2)),
+          liters: waterLiters
+        },
+        totalEstimatedBill: parseFloat((electricityCost + waterCost).toFixed(2)),
+        currency: 'INR',
+        source: tariffRes.rows.length > 0 ? 'Dynamic ML' : 'Official Data'
       }
     });
   } catch (error) { next(error); }
 };
+
 
 const getTariffTemplate = (req, res) => {
     res.json(INDIA_TARIFFS);
