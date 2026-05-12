@@ -7,23 +7,43 @@
 const nodemailer = require('nodemailer');
 
 // Create reusable transporter object using environment-configured SMTP
+// NOTE: Render blocks direct connections to Gmail. Use email relay services:
+// - Mailtrap (free): smtp.mailtrap.io:2525
+// - SendGrid (free 100/day): smtp.sendgrid.net:587
+// - Mailgun: smtp.mailgun.org:587
+
+const determineSecurity = () => {
+  const port = parseInt(process.env.SMTP_PORT, 10);
+  const secureEnv = process.env.SMTP_SECURE;
+  
+  if (secureEnv === 'true') return true;
+  if (secureEnv === 'false') return false;
+  
+  // Default based on port
+  if (port === 465) return true;  // SSL
+  if (port === 2525) return false; // Mailtrap
+  if (port === 587) return false;  // TLS
+  
+  return false; // Default to TLS
+};
+
 const smtpConfig = {
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.SMTP_PORT, 10) || 587,
-  secure: process.env.SMTP_SECURE === 'true' || false, // false for TLS (port 587), true for SSL (port 465)
+  secure: determineSecurity(),
   auth: {
     user: process.env.SMTP_USER || process.env.EMAIL_USER || '',
     pass: process.env.SMTP_PASS || process.env.EMAIL_PASS || '',
   },
-  // Connection pooling and timeout settings
   pool: {
     maxConnections: 5,
     maxMessages: 100,
     rateDelta: 1000,
     rateLimit: 10,
   },
-  connectionTimeout: 10000, // 10 seconds
-  socketTimeout: 10000, // 10 seconds
+  connectionTimeout: 15000,
+  socketTimeout: 15000,
+  greetingTimeout: 10000,
   logger: process.env.NODE_ENV === 'development',
   debug: process.env.NODE_ENV === 'development',
 };
@@ -32,11 +52,29 @@ const smtpConfig = {
 if (!smtpConfig.auth.user || !smtpConfig.auth.pass) {
   console.error('❌ CRITICAL: SMTP credentials are missing!');
   console.error('   Please set SMTP_USER and SMTP_PASS environment variables');
-  console.error('   For Gmail: Use an App Password (not your regular password)');
-  console.error('   Generate at: https://myaccount.google.com/apppasswords');
+  console.error('   ');
+  console.error('   Option 1: Gmail (if not on Render)');
+  console.error('   - SMTP_HOST: smtp.gmail.com');
+  console.error('   - SMTP_PORT: 465 or 587');
+  console.error('   - SMTP_USER: your-email@gmail.com');
+  console.error('   - SMTP_PASS: app-password (from https://myaccount.google.com/apppasswords)');
+  console.error('   ');
+  console.error('   Option 2: Mailtrap (RECOMMENDED FOR RENDER)');
+  console.error('   - SMTP_HOST: smtp.mailtrap.io');
+  console.error('   - SMTP_PORT: 2525');
+  console.error('   - SMTP_USER: mailtrap-username');
+  console.error('   - SMTP_PASS: mailtrap-password');
+  console.error('   - Sign up free: https://mailtrap.io');
+  console.error('   ');
+  console.error('   Option 3: SendGrid');
+  console.error('   - SMTP_HOST: smtp.sendgrid.net');
+  console.error('   - SMTP_PORT: 587');
+  console.error('   - SMTP_USER: apikey');
+  console.error('   - SMTP_PASS: your-sendgrid-api-key');
 }
 
-const SENDER_EMAIL = (process.env.SMTP_USER || process.env.EMAIL_USER || '').trim();
+// SENDER_EMAIL can be different from SMTP auth user (e.g., Mailtrap auth user vs display email)
+const SENDER_EMAIL = (process.env.SENDER_EMAIL || process.env.SMTP_USER || process.env.EMAIL_USER || 'noreply@hydrogrid.com').trim();
 
 let transporter = null;
 
