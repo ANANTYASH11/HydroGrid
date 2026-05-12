@@ -4,9 +4,9 @@
 
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { query } = require('../config/db');
+const { query } = require('../database/db');
 const { OAuth2Client } = require('google-auth-library');
-const { sendWelcomeEmail } = require('../utils/emailService');
+const { sendWelcomeEmail, sendLoginAlertEmail } = require('../utils/emailService');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -20,6 +20,7 @@ const register = async (req, res, next) => {
   try {
     const { name, email, password, state = 'Unknown' } = req.body;
 
+    // Validate required fields
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Please provide name, email, and password' });
     }
@@ -81,6 +82,14 @@ const login = async (req, res, next) => {
     }
 
     const token = generateToken(user.id);
+
+    // Send login alert email to user's registered email
+    const userInfo = {
+      ipAddress: req.headers['x-forwarded-for'] || req.connection.remoteAddress,
+      device: req.headers['user-agent'] ? req.headers['user-agent'].substring(0, 100) : 'Unknown',
+      location: 'India' // Could be enhanced with IP geolocation service
+    };
+    sendLoginAlertEmail(user, userInfo).catch(e => console.error('Login Alert Email Error:', e));
 
     return res.json({
       success: true,

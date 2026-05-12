@@ -30,7 +30,8 @@ export default function SignupPage() {
     'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
   ];
 
-  // Calculate password strength
+  // Calculate password strength and validation
+  const passwordValidation = pas
   const getPasswordStrength = (pwd) => {
     let score = 0;
     if (pwd.length >= 6) score++;
@@ -38,18 +39,6 @@ export default function SignupPage() {
     if (/[A-Z]/.test(pwd)) score++;
     if (/[0-9]/.test(pwd)) score++;
     if (/[^A-Za-z0-9]/.test(pwd)) score++;
-    return score;
-  };
-
-  const strength = getPasswordStrength(password);
-  const strengthLabels = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
-  const strengthColors = ['', 'bg-red-500', 'bg-amber-500', 'bg-yellow-500', 'bg-secondary-500', 'bg-green-400'];
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
     if (password.length < 6) {
       setError('Password must be at least 6 characters');
       setLoading(false);
@@ -69,7 +58,18 @@ export default function SignupPage() {
         serverMessage.includes('Email already registered')
           ? 'That email is already registered. Please sign in instead.'
           : serverMessage
-      );
+      );atch (err) {
+      const serverMessage = err.response?.data?.message || err.message || 'Registration failed. Please try again.';
+      const serverErrors = err.response?.data?.errors || [];
+      
+      // Display first error from server, or full message
+      if (serverErrors.length > 0) {
+        setError(serverErrors[0]);
+      } else if (serverMessage.includes('Email already registered')) {
+        setError('That email is already registered. Please sign in instead.');
+      } else {
+        setError(serverMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -145,11 +145,6 @@ export default function SignupPage() {
                 <input
                   id="signup-password"
                   type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="input-field !pl-11 !pr-11"
-                  required
                   minLength={6}
                 />
                 <button
@@ -177,7 +172,12 @@ export default function SignupPage() {
                   <p className="text-xs text-zinc-500">
                     Password strength: <span className="font-medium">{strengthLabels[strength]}</span>
                   </p>
-                </div>
+                </className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                      <p className="text-xs font-medium text-green-400">Strong password!</p>
+                    </div>
+                  )}
+                </motion.div>
               )}
             </div>
 
@@ -200,8 +200,8 @@ export default function SignupPage() {
 
             <button
               type="submit"
-              disabled={loading}
-              className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50"
+              disabled={loading || !name || !email || !isPasswordValid || !state}
+              className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -241,8 +241,8 @@ export default function SignupPage() {
               'Real-time anomaly detection',
               'Detailed cost analysis & reports',
               'Carbon footprint tracking',
-              'Gamification with badges & leaderboard',
-            ].map((benefit, i) => (
+              'Gamification wit}
+              className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50
               <motion.div
                 key={i}
                 initial={{ opacity: 0, x: 20 }}

@@ -2,7 +2,7 @@
  * Admin Controller (Supabase/Postgres version)
  */
 
-const { query } = require('../config/db');
+const { query } = require('../database/db');
 
 const getStats = async (req, res) => {
   try {

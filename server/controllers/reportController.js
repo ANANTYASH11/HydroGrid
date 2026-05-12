@@ -2,7 +2,7 @@
  * Report Controller (Supabase/Postgres version)
  */
 
-const { query } = require('../config/db');
+const { query } = require('../database/db');
 
 const generateReport = async (req, res, next) => {
   try {

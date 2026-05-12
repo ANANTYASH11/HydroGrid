@@ -3,7 +3,7 @@
  */
 
 const jwt = require('jsonwebtoken');
-const { query } = require('../config/db');
+const { query } = require('../database/db');
 
 /**
  * protect - Middleware that requires a valid JWT token

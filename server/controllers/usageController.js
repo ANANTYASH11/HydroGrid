@@ -3,7 +3,7 @@
  * Handles CRUD operations for water/electricity usage data using Raw SQL
  */
 
-const { query } = require('../config/db');
+const { query } = require('../database/db');
 const { sendAlertEmail } = require('../utils/emailService');
 
 const INDIA_TARIFFS = {

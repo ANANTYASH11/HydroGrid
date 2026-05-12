@@ -2,7 +2,7 @@
  * ML Training Controller (Supabase/Postgres version)
  */
 
-const { query } = require('../config/db');
+const { query } = require('../database/db');
 const { sendAlertEmail } = require('../utils/emailService');
 
 const getTrainingData = async (req, res, next) => {

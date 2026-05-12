@@ -1,6 +1,6 @@
 /**
  * Email Service
- * Handles sending emails using Mailtrap SMTP
+ * Handles sending emails using Nodemailer SMTP
  * Used for alerts, notifications, and user communications
  */
 
@@ -10,20 +10,63 @@ const nodemailer = require('nodemailer');
 const smtpConfig = {
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.SMTP_PORT, 10) || 587,
-  secure: process.env.SMTP_SECURE === 'true',
+  secure: process.env.SMTP_SECURE === 'true' || false, // false for TLS (port 587), true for SSL (port 465)
   auth: {
-    user: process.env.SMTP_USER || process.env.EMAIL_USER || 'anantyashh21@gmail.com',
-    pass: process.env.SMTP_PASS || process.env.EMAIL_PASS || 'ddfn mlrb wvfj cvmx',
+    user: process.env.SMTP_USER || process.env.EMAIL_USER || '',
+    pass: process.env.SMTP_PASS || process.env.EMAIL_PASS || '',
   },
+  // Connection pooling and timeout settings
+  pool: {
+    maxConnections: 5,
+    maxMessages: 100,
+    rateDelta: 1000,
+    rateLimit: 10,
+  },
+  connectionTimeout: 10000, // 10 seconds
+  socketTimeout: 10000, // 10 seconds
+  logger: process.env.NODE_ENV === 'development',
+  debug: process.env.NODE_ENV === 'development',
 };
 
-const SENDER_EMAIL = process.env.SMTP_USER || process.env.EMAIL_USER || 'anantyashh21@gmail.com';
-
-if (!process.env.SMTP_HOST && !process.env.EMAIL_USER) {
-  console.warn('⚠️ Email service is using default configuration. Ensure EMAIL_USER and EMAIL_PASS are set in Render.');
+// Validate SMTP configuration
+if (!smtpConfig.auth.user || !smtpConfig.auth.pass) {
+  console.error('❌ CRITICAL: SMTP credentials are missing!');
+  console.error('   Please set SMTP_USER and SMTP_PASS environment variables');
+  console.error('   For Gmail: Use an App Password (not your regular password)');
+  console.error('   Generate at: https://myaccount.google.com/apppasswords');
 }
 
-const transporter = nodemailer.createTransport(smtpConfig);
+const SENDER_EMAIL = (process.env.SMTP_USER || process.env.EMAIL_USER || '').trim();
+
+let transporter = null;
+
+// Initialize transporter with error handling
+const initializeTransporter = () => {
+  try {
+    transporter = nodemailer.createTransport(smtpConfig);
+    
+    // Verify SMTP connection on startup
+    transporter.verify((error, success) => {
+      if (error) {
+        console.error('❌ SMTP connection failed:', error.message);
+        console.error('   Host:', smtpConfig.host);
+        console.error('   Port:', smtpConfig.port);
+        console.error('   User:', smtpConfig.auth.user);
+      } else {
+        console.log('✅ SMTP connection verified successfully');
+        console.log('   Host:', smtpConfig.host);
+        console.log('   Port:', smtpConfig.port);
+      }
+    });
+    
+    return transporter;
+  } catch (error) {
+    console.error('❌ Failed to create email transporter:', error.message);
+    return null;
+  }
+};
+
+transporter = initializeTransporter();
 
 /**
  * Send an alert email to a user
@@ -32,22 +75,31 @@ const transporter = nodemailer.createTransport(smtpConfig);
  */
 const sendAlertEmail = async (user, alert) => {
   try {
+    if (!transporter) {
+      throw new Error('Email transporter not initialized. Check SMTP credentials.');
+    }
+
+    if (!user || !user.email) {
+      throw new Error('Invalid user object: email is required');
+    }
+
     const subject = getAlertSubject(alert);
     const htmlContent = getAlertEmailTemplate(user, alert);
 
     const mailOptions = {
       from: `"HydroGrid Alert System" <${SENDER_EMAIL}>`,
-      to: user.email,
+      to: user.email.trim(),
       subject: subject,
       html: htmlContent,
+      priority: alert.severity === 'red' ? 'high' : 'normal',
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Alert email sent successfully:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    console.log('✅ Alert email sent successfully to', user.email, 'MessageID:', info.messageId);
+    return { success: true, messageId: info.messageId, recipient: user.email };
   } catch (error) {
-    console.error('❌ Failed to send alert email:', error);
-    return { success: false, error: error.message };
+    console.error('❌ Failed to send alert email:', error.message);
+    return { success: false, error: error.message, recipient: user?.email };
   }
 };
 
@@ -57,13 +109,21 @@ const sendAlertEmail = async (user, alert) => {
  */
 const sendWelcomeEmail = async (user) => {
   try {
+    if (!transporter) {
+      throw new Error('Email transporter not initialized. Check SMTP credentials.');
+    }
+
+    if (!user || !user.email) {
+      throw new Error('Invalid user object: email is required');
+    }
+
     const mailOptions = {
       from: `"HydroGrid Team" <${SENDER_EMAIL}>`,
-      to: user.email,
+      to: user.email.trim(),
       subject: 'Welcome to HydroGrid - Smart Water & Electricity Intelligence',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2563eb;">Welcome to HydroGrid, ${user.name}!</h2>
+          <h2 style="color: #2563eb;">Welcome to HydroGrid, ${user.name || 'User'}!</h2>
           <p>Thank you for joining our Smart Water & Electricity Intelligence Platform.</p>
           <p>You will now receive alerts and notifications about your usage patterns, potential savings, and system updates.</p>
           <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -83,11 +143,11 @@ const sendWelcomeEmail = async (user) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Welcome email sent successfully:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    console.log('✅ Welcome email sent successfully to', user.email, 'MessageID:', info.messageId);
+    return { success: true, messageId: info.messageId, recipient: user.email };
   } catch (error) {
-    console.error('❌ Failed to send welcome email:', error);
-    return { success: false, error: error.message };
+    console.error('❌ Failed to send welcome email:', error.message);
+    return { success: false, error: error.message, recipient: user?.email };
   }
 };
 
@@ -98,16 +158,28 @@ const sendWelcomeEmail = async (user) => {
  */
 const sendPasswordResetEmail = async (user, resetToken) => {
   try {
+    if (!transporter) {
+      throw new Error('Email transporter not initialized. Check SMTP credentials.');
+    }
+
+    if (!user || !user.email) {
+      throw new Error('Invalid user object: email is required');
+    }
+
+    if (!resetToken) {
+      throw new Error('Reset token is required');
+    }
+
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
 
     const mailOptions = {
       from: `"HydroGrid Security" <${SENDER_EMAIL}>`,
-      to: user.email,
+      to: user.email.trim(),
       subject: 'Password Reset Request - HydroGrid',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #dc2626;">Password Reset Request</h2>
-          <p>Hello ${user.name},</p>
+          <p>Hello ${user.name || 'User'},</p>
           <p>You requested a password reset for your HydroGrid account.</p>
           <p>Please click the link below to reset your password:</p>
           <div style="text-align: center; margin: 30px 0;">
@@ -121,11 +193,11 @@ const sendPasswordResetEmail = async (user, resetToken) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Password reset email sent successfully:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    console.log('✅ Password reset email sent successfully to', user.email, 'MessageID:', info.messageId);
+    return { success: true, messageId: info.messageId, recipient: user.email };
   } catch (error) {
-    console.error('❌ Failed to send password reset email:', error);
-    return { success: false, error: error.message };
+    console.error('❌ Failed to send password reset email:', error.message);
+    return { success: false, error: error.message, recipient: user?.email };
   }
 };
 
@@ -217,6 +289,94 @@ const getAlertEmailTemplate = (user, alert) => {
 };
 
 /**
+ * Send a login alert email to user
+ * @param {Object} user - User object with email and name
+ * @param {Object} loginInfo - Login info with IP, device, location
+ */
+const sendLoginAlertEmail = async (user, loginInfo = {}) => {
+  try {
+    if (!transporter) {
+      throw new Error('Email transporter not initialized. Check SMTP credentials.');
+    }
+
+    if (!user || !user.email) {
+      throw new Error('Invalid user object: email is required');
+    }
+
+    const loginTime = new Date().toLocaleString('en-US', { 
+      weekday: 'short', 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit',
+      second: '2-digit',
+      timeZone: 'Asia/Kolkata'
+    });
+
+    const mailOptions = {
+      from: `"HydroGrid Security" <${SENDER_EMAIL}>`,
+      to: user.email.trim(),
+      subject: '🔐 Login Alert - HydroGrid Account Access',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #2563eb; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+            <h2 style="margin: 0; font-size: 24px;">🔐 Account Login Alert</h2>
+          </div>
+          <div style="background-color: white; border: 1px solid #e5e7eb; border-radius: 0 0 8px 8px; padding: 20px;">
+            <p>Hello ${user.name || 'User'},</p>
+
+            <p>Your HydroGrid account was just accessed. Here are the login details:</p>
+
+            <div style="background-color: #f3f4f6; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #2563eb;">
+              <strong>Login Time:</strong><br>
+              ${loginTime}<br><br>
+              
+              <strong>Account Email:</strong><br>
+              ${user.email}<br><br>
+              
+              ${loginInfo.ipAddress ? `<strong>IP Address:</strong><br>${loginInfo.ipAddress}<br><br>` : ''}
+              
+              ${loginInfo.device ? `<strong>Device:</strong><br>${loginInfo.device}<br><br>` : ''}
+              
+              ${loginInfo.location ? `<strong>Location:</strong><br>${loginInfo.location}<br><br>` : ''}
+            </div>
+
+            <div style="background-color: #fef3c7; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+              <h4 style="margin-top: 0; color: #92400e;">⚠️ Security Tip:</h4>
+              <ul style="margin-bottom: 0;">
+                <li>If this wasn't you, change your password immediately</li>
+                <li>Enable two-factor authentication for extra security</li>
+                <li>Review your recent account activity</li>
+                <li>Contact support if you see suspicious activity</li>
+              </ul>
+            </div>
+
+            <p style="color: #6b7280; font-size: 14px;">
+              This is an automated security alert. Your HydroGrid account is protected by our security systems.
+            </p>
+
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+
+            <p style="font-size: 12px; color: #9ca3af; text-align: center;">
+              HydroGrid - Smart Water & Electricity Intelligence Platform<br>
+              © 2026 HydroGrid. All rights reserved.
+            </p>
+          </div>
+        </div>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Login alert email sent successfully to', user.email, 'MessageID:', info.messageId);
+    return { success: true, messageId: info.messageId, recipient: user.email };
+  } catch (error) {
+    console.error('❌ Failed to send login alert email:', error.message);
+    return { success: false, error: error.message, recipient: user?.email };
+  }
+};
+
+/**
  * Test email configuration
  * @returns {Promise<Object>} Test result
  */
@@ -235,6 +395,7 @@ module.exports = {
   sendAlertEmail,
   sendWelcomeEmail,
   sendPasswordResetEmail,
+  sendLoginAlertEmail,
   testEmailConnection,
   transporter,
 };

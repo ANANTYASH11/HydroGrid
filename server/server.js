@@ -8,7 +8,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { WebSocketServer } = require('ws');
-const { connectDB } = require('./config/db');
+const { connectDB } = require('./database/db');
 const errorHandler = require('./middleware/errorHandler');
 
 // Import route modules

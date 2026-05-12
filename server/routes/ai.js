@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { query } = require('../config/db');
+const { query } = require('../database/db');
 const { protect } = require('../middleware/auth');
 const { getGroqAI } = require('../utils/groqAI');
 

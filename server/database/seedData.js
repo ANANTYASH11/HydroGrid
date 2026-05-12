@@ -1,7 +1,7 @@
 const path = require('path');
 const bcrypt = require('bcryptjs');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
-const { query } = require('../config/db');
+const { query } = require('./db');
 
 async function seedUsers() {
   try {
