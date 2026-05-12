@@ -80,25 +80,27 @@ const sendAlertEmail = async (user, alert) => {
     }
 
     if (!user || !user.email) {
+      console.error('❌ sendAlertEmail: Invalid user object', { userId: user?.id, userEmail: user?.email });
       throw new Error('Invalid user object: email is required');
     }
 
+    const recipientEmail = user.email.trim();
     const subject = getAlertSubject(alert);
     const htmlContent = getAlertEmailTemplate(user, alert);
 
     const mailOptions = {
       from: `"HydroGrid Alert System" <${SENDER_EMAIL}>`,
-      to: user.email.trim(),
+      to: recipientEmail,
       subject: subject,
       html: htmlContent,
       priority: alert.severity === 'red' ? 'high' : 'normal',
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Alert email sent successfully to', user.email, 'MessageID:', info.messageId);
-    return { success: true, messageId: info.messageId, recipient: user.email };
+    console.log(`✅ Alert email sent successfully to ${recipientEmail} for user ${user.id} | MessageID: ${info.messageId}`);
+    return { success: true, messageId: info.messageId, recipient: recipientEmail };
   } catch (error) {
-    console.error('❌ Failed to send alert email:', error.message);
+    console.error(`❌ Failed to send alert email to ${user?.email}:`, error.message);
     return { success: false, error: error.message, recipient: user?.email };
   }
 };
@@ -114,12 +116,14 @@ const sendWelcomeEmail = async (user) => {
     }
 
     if (!user || !user.email) {
+      console.error('❌ sendWelcomeEmail: Invalid user object', { userId: user?.id, userEmail: user?.email });
       throw new Error('Invalid user object: email is required');
     }
 
+    const recipientEmail = user.email.trim();
     const mailOptions = {
       from: `"HydroGrid Team" <${SENDER_EMAIL}>`,
-      to: user.email.trim(),
+      to: recipientEmail,
       subject: 'Welcome to HydroGrid - Smart Water & Electricity Intelligence',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -143,10 +147,10 @@ const sendWelcomeEmail = async (user) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Welcome email sent successfully to', user.email, 'MessageID:', info.messageId);
-    return { success: true, messageId: info.messageId, recipient: user.email };
+    console.log(`✅ Welcome email sent successfully to ${recipientEmail} for user ${user.id} | MessageID: ${info.messageId}`);
+    return { success: true, messageId: info.messageId, recipient: recipientEmail };
   } catch (error) {
-    console.error('❌ Failed to send welcome email:', error.message);
+    console.error(`❌ Failed to send welcome email to ${user?.email}:`, error.message);
     return { success: false, error: error.message, recipient: user?.email };
   }
 };
@@ -163,6 +167,7 @@ const sendPasswordResetEmail = async (user, resetToken) => {
     }
 
     if (!user || !user.email) {
+      console.error('❌ sendPasswordResetEmail: Invalid user object', { userId: user?.id, userEmail: user?.email });
       throw new Error('Invalid user object: email is required');
     }
 
@@ -170,11 +175,12 @@ const sendPasswordResetEmail = async (user, resetToken) => {
       throw new Error('Reset token is required');
     }
 
+    const recipientEmail = user.email.trim();
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
 
     const mailOptions = {
       from: `"HydroGrid Security" <${SENDER_EMAIL}>`,
-      to: user.email.trim(),
+      to: recipientEmail,
       subject: 'Password Reset Request - HydroGrid',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -193,10 +199,10 @@ const sendPasswordResetEmail = async (user, resetToken) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Password reset email sent successfully to', user.email, 'MessageID:', info.messageId);
-    return { success: true, messageId: info.messageId, recipient: user.email };
+    console.log(`✅ Password reset email sent successfully to ${recipientEmail} for user ${user.id} | MessageID: ${info.messageId}`);
+    return { success: true, messageId: info.messageId, recipient: recipientEmail };
   } catch (error) {
-    console.error('❌ Failed to send password reset email:', error.message);
+    console.error(`❌ Failed to send password reset email to ${user?.email}:`, error.message);
     return { success: false, error: error.message, recipient: user?.email };
   }
 };
@@ -300,8 +306,11 @@ const sendLoginAlertEmail = async (user, loginInfo = {}) => {
     }
 
     if (!user || !user.email) {
+      console.error('❌ sendLoginAlertEmail: Invalid user object', { userId: user?.id, userEmail: user?.email });
       throw new Error('Invalid user object: email is required');
     }
+
+    const recipientEmail = user.email.trim();
 
     const loginTime = new Date().toLocaleString('en-US', { 
       weekday: 'short', 
@@ -316,7 +325,7 @@ const sendLoginAlertEmail = async (user, loginInfo = {}) => {
 
     const mailOptions = {
       from: `"HydroGrid Security" <${SENDER_EMAIL}>`,
-      to: user.email.trim(),
+      to: recipientEmail,
       subject: '🔐 Login Alert - HydroGrid Account Access',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -368,10 +377,10 @@ const sendLoginAlertEmail = async (user, loginInfo = {}) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Login alert email sent successfully to', user.email, 'MessageID:', info.messageId);
-    return { success: true, messageId: info.messageId, recipient: user.email };
+    console.log(`✅ Login alert email sent successfully to ${recipientEmail} for user ${user.id} | MessageID: ${info.messageId}`);
+    return { success: true, messageId: info.messageId, recipient: recipientEmail };
   } catch (error) {
-    console.error('❌ Failed to send login alert email:', error.message);
+    console.error(`❌ Failed to send login alert email to ${user?.email}:`, error.message);
     return { success: false, error: error.message, recipient: user?.email };
   }
 };

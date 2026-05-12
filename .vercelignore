@@ -1,0 +1,43 @@
+# Node modules
+node_modules/
+
+# Git
+.git
+.gitignore
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build files
+dist/
+build/
+
+# Test files
+*.test.js
+*.spec.js
+__tests__/
+
+# Documentation
+*.md
+DOCS/
+docs/
+
+# Server-side code (client doesn't need this)
+server/
+
+# Development files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Generated files
+generated/
+temp/
+tmp/

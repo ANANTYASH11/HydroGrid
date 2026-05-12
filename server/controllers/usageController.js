@@ -669,6 +669,11 @@ const getCarbonFootprint = async (req, res, next) => {
  * Utility for alerts
  */
 async function checkAndCreateAlert(user, type, value) {
+  if (!user || !user.id) {
+    console.error('❌ checkAndCreateAlert: Invalid user object', user);
+    throw new Error('Invalid user object in checkAndCreateAlert');
+  }
+
   const threshold = type === 'water' ? user.settings?.waterThreshold || 500 : user.settings?.electricityThreshold || 50;
   if (value <= threshold) return;
 
@@ -680,6 +685,7 @@ async function checkAndCreateAlert(user, type, value) {
     [user.id, type, severity, message, threshold, value]
   );
 
+  console.log(`📧 Creating alert for User ID: ${user.id}, Email: ${user.email}, Type: ${type}`);
   sendAlertEmail(user, alertRes.rows[0]).catch(e => console.error('Alert Email Error:', e));
 }
 
